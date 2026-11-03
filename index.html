@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
-<script>window.WN_BUILD="20261103130417";</script>
+<script>window.WN_BUILD="20261103175035";</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>World Now</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -1261,13 +1261,9 @@ const ZMIN = 0.16, ZMAX = 40;
 /* ---------- Street map: zoom deep into the globe and it turns into a flat street map with roads (OpenStreetMap vector tiles, CARTO Dark Matter style), like OSIRIS ---------- */
 const ST = {map: null, open: false, loading: false};
 const ST_STYLES = [
-  'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+  // OpenFreeMap: free, no key, OpenStreetMap data (CARTO now needs a personal API key; Esri needs an ArcGIS account)
   'https://tiles.openfreemap.org/styles/dark',
-  {version: 8, glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
-   sources: {base: {type: 'raster', tileSize: 256, maxzoom: 16, attribution: 'Esri, HERE, Garmin, © OpenStreetMap contributors',
-     tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}']},
-     ref: {type: 'raster', tileSize: 256, maxzoom: 16, tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}']}},
-   layers: [{id: 'base', type: 'raster', source: 'base'}, {id: 'ref', type: 'raster', source: 'ref'}]}
+  'https://tiles.openfreemap.org/styles/liberty'
 ];
 const ST_STYLE = ST_STYLES[0];
 function stWatch(map) {
