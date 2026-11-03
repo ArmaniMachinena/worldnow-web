@@ -376,7 +376,7 @@ def fires(p):
     p['firesSrc'] = 'VIIRS NOAA-20' if key else 'MODIS'
 
 
-WARWORDS = re.compile(r'strike|attack|drone|missile|rocket|explos|blast|shell|bomb|airstrike|tanker|vessel|ship|war|troops|army|military|killed|clash|fighting|offensive|raid|artillery')
+WARWORDS = re.compile(r'\b(strikes?|attack\w*|drones?|missiles?|rockets?|explosi\w*|blasts?|shell(ing|ed)|bomb\w*|airstrikes?|tankers?|vessels?|war|troops|army|military|killed|clash\w*|fighting|offensive|raids?|artillery|gunmen|insurgents?|militants?|jihadists?|terror\w*)\b')
 GDELT_ROOTS = {'18': 'assault', '19': 'fight', '20': 'mass violence'}
 
 
@@ -418,7 +418,7 @@ def incidents(p):
             # assassinations, mass violence), city-level places only, and a war-like word in the article address
             if not c[26].startswith(('183', '186', '190', '193', '194', '195', '196', '20')) or c[51] not in ('3', '4'):
                 continue
-            if not WARWORDS.search(c[60].lower()):
+            if not WARWORDS.search(c[60].lower().replace('_', ' ')):
                 continue
             try:
                 events.append([int(datetime.strptime(c[59], '%Y%m%d%H%M%S').replace(tzinfo=timezone.utc).timestamp()),
