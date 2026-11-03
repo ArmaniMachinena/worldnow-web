@@ -309,8 +309,51 @@ def fires(p):
             continue
     if len(out) < 200:
         raise RuntimeError(f'only {len(out)} fires')
+    # How many of the last 7 days each spot was hot: 3+ days = steady source (gas flare, plant), 1 = new.
+    hist = load('firehist.json').get('cells', {})
+    cut = (datetime.now(timezone.utc) - timedelta(days=7)).strftime('%Y%m%d')
+    cell = lambda la, lo: f'{round(la / 0.02)}:{round(lo / 0.02)}'
+    for f in out:
+        d = f[4][:10].replace('-', '')
+        k = cell(f[0], f[1]); days = set(hist.get(k, [])); days.add(d); hist[k] = sorted(days)
+    hist = {k: [d for d in v if d >= cut] for k, v in hist.items()}
+    hist = {k: v for k, v in hist.items() if v}
+    def seen(la, lo):
+        a, b = round(la / 0.02), round(lo / 0.02); ds = set()
+        for i in (-1, 0, 1):
+            for j in (-1, 0, 1):
+                ds.update(hist.get(f'{a + i}:{b + j}', []))
+        return len(ds)
+    for f in out:
+        f.append(seen(f[0], f[1]))
+    save('firehist.json', {'cells': hist, 'gen': int(NOW)})
     p['fires'] = out
     p['firesSrc'] = 'VIIRS NOAA-20' if key else 'MODIS'
+
+
+INCIDENT_Q = '(explosion OR explosions OR airstrike OR "air strike" OR "drone attack" OR "missile strike" OR shelling OR "tanker fire" OR "ship attacked" OR "vessel attacked" OR "fire aboard")'
+
+
+def incidents(p):
+    out = []
+    try:
+        url = ('https://api.gdeltproject.org/api/v2/geo/geo?query=' + urllib.parse.quote(INCIDENT_Q + ' sourcelang:english')
+               + '&mode=PointData&format=GeoJSON&timespan=24h&maxpoints=300')
+        d = jget(url, timeout=60)
+        for f in d.get('features') or []:
+            g, q = f.get('geometry') or {}, f.get('properties') or {}
+            c = g.get('coordinates') or []
+            if len(c) < 2:
+                continue
+            arts = re.findall(r'<a href="([^"]+)"[^>]*title="([^"]*)"', q.get('html') or '')
+            out.append([round(c[1], 3), round(c[0], 3), q.get('name') or '', int(q.get('count') or len(arts) or 1),
+                        [[t, u] for u, t in arts[:4]]])
+    except Exception as e:
+        log(f'     incidents geo: {type(e).__name__}: {str(e)[:120]}')
+    if not out:
+        raise RuntimeError('no incidents')
+    out.sort(key=lambda x: -x[3])
+    p['incidents'] = out[:250]
 
 
 def kznews(p):
@@ -498,6 +541,7 @@ def main():
     step(mid, 'eonet', 60, eonet)
     step(mid, 'fires', 30, fires)
     step(mid, 'kznews', 30, kznews)
+    step(mid, 'incidents', 30, incidents)
     step(wx, 'weather', 60, weather)
     step(slow, 'sats', 360, sats)
     step(slow, 'risk', 180, risk)
