@@ -290,6 +290,44 @@ def eonet(p):
     p['events'] = out
 
 
+_LAND = None
+
+
+def LAND():
+    """Land polygons as (bbox, rings) for a quick point-in-polygon test; cached between runs in land50.json."""
+    global _LAND
+    if _LAND is not None:
+        return _LAND
+    gj = load('land50.json')
+    if not gj:
+        gj = jget('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_land.geojson', timeout=90)
+        save('land50.json', gj)
+    polys = []
+    for f in gj['features']:
+        g = f['geometry']
+        for poly in (g['coordinates'] if g['type'] == 'MultiPolygon' else [g['coordinates']]):
+            ring = poly[0]
+            xs = [c[0] for c in ring]; ys = [c[1] for c in ring]
+            polys.append(((min(xs), min(ys), max(xs), max(ys)), ring))
+    _LAND = polys
+    return polys
+
+
+def on_land(polys, x, y):
+    for (x0, y0, x1, y1), ring in polys:
+        if x < x0 or x > x1 or y < y0 or y > y1:
+            continue
+        inside, j = False, len(ring) - 1
+        for i in range(len(ring)):
+            xi, yi = ring[i][0], ring[i][1]; xj, yj = ring[j][0], ring[j][1]
+            if (yi > y) != (yj > y) and x < (xj - xi) * (y - yi) / ((yj - yi) or 1e-12) + xi:
+                inside = not inside
+            j = i
+        if inside:
+            return True
+    return False
+
+
 def fires(p):
     key = os.environ.get('FIRMS_KEY')
     if key:
@@ -326,6 +364,13 @@ def fires(p):
         return len(ds)
     for f in out:
         f.append(seen(f[0], f[1]))
+    # at sea? (Natural Earth 1:50m land; a point on the coastline may count either way)
+    try:
+        land = LAND()
+        for f in out:
+            f.append(0 if on_land(land, f[1], f[0]) else 1)
+    except Exception as e:
+        log(f'     land mask: {type(e).__name__}')
     save('firehist.json', {'cells': hist, 'gen': int(NOW)})
     p['fires'] = out
     p['firesSrc'] = 'VIIRS NOAA-20' if key else 'MODIS'
