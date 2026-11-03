@@ -47,6 +47,8 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-o
 #ticker{display:flex;gap:12px;align-items:center;padding:9px 12px;cursor:pointer;font-family:var(--f-mono);font-size:11.5px;flex-wrap:wrap}
 #ticker .tg{color:var(--gold);font-weight:700;font-size:14px}
 #ticker span em{font-style:normal;color:var(--dim);font-size:10px;margin-right:4px}
+#mapView{position:absolute;inset:0;z-index:3;background:#0e1014}#mapView[hidden]{display:none}.maplibregl-map{position:absolute;inset:0;overflow:hidden;-webkit-tap-highlight-color:transparent}.maplibregl-canvas{position:absolute;left:0;top:0}.maplibregl-canvas-container.maplibregl-interactive{cursor:grab}.maplibregl-ctrl-bottom-right{position:absolute;right:4px;bottom:4px;z-index:2;font:10px/1.3 system-ui;color:#9aa}.maplibregl-ctrl-attrib a{color:#9aa}.maplibregl-ctrl-attrib-button{display:none}.maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-inner{display:block}
+#bGlobe{position:absolute;z-index:6;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));padding:9px 16px;font-family:var(--f-mono);font-size:12px;font-weight:800;color:var(--gold);cursor:pointer}#bGlobe[hidden]{display:none}
 #bNuke{font-family:var(--f-mono);font-size:11px;font-weight:800;letter-spacing:.12em;color:#ffd64d;border-color:rgba(255,214,77,.5);padding:8px 12px;cursor:pointer}#bNuke.on{background:#ffd64d;color:#0a0a0a}
 #hint{font-family:var(--f-mono);font-size:11px;color:var(--dim);padding:7px 10px;max-width:330px}
 /* popover (layers / search) */
@@ -204,6 +206,8 @@ canvas.layer{position:absolute;inset:0;width:100%;height:100%;display:block;poin
     <div id="clocks2" style="font-family:var(--f-mono);font-size:10.5px;color:var(--dim);letter-spacing:.06em;margin-top:6px" hidden></div>
   </header>
 
+  <div id="mapView" hidden></div>
+  <button id="bGlobe" class="panel" hidden>🌐 Globe</button>
   <nav id="qrail" class="panel" aria-label="Quick layer toggles"></nav>
   <nav id="rail" aria-label="Tools">
     <button class="rbtn panel" id="bRadar" title="World pulse" aria-label="World pulse traffic light" style="height:auto;padding:7px 0;display:flex;flex-direction:column;align-items:center;gap:5px"><i class="tl r"></i><i class="tl y"></i><i class="tl g"></i></button>
@@ -1192,6 +1196,48 @@ function drawOrbit(ctx, line, color, rec) {
 const pointers = new Map(); let drag = null, moved = 0, pinch = null, lastMove = null, hold = null;
 const HOLD_MS = 550;
 const ZMIN = 0.16, ZMAX = 40;
+/* ---------- Street map: zoom deep into the globe and it turns into a flat street map with roads (OpenStreetMap vector tiles, CARTO Dark Matter style), like OSIRIS ---------- */
+const ST = {map: null, open: false, loading: false};
+const ST_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+// R already includes S.zoom (R = base * zoom)
+const globeZoomToMerc = () => Math.log2(2 * Math.PI * R / 512);
+const mercToGlobeZoom = mz => 512 * Math.pow(2, mz) / (2 * Math.PI) / (R / S.zoom);
+function loadMapLibre(cb) {
+  if (window.maplibregl) return cb();
+  const urls = ['https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.7.1/maplibre-gl.min.js', 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js'];
+  const next = i => { if (i >= urls.length) { ST.loading = false; return; } const sc = document.createElement('script'); sc.src = urls[i]; sc.onload = cb; sc.onerror = () => next(i + 1); document.head.appendChild(sc); };
+  next(0);
+}
+function camGeo() { return {type: 'FeatureCollection', features: WCAM.map((c, i) => ({type: 'Feature', geometry: {type: 'Point', coordinates: [c[1], c[0]]}, properties: {i, n: c[2] || ''}}))}; }
+function addStreetLayers(map) {
+  const font = (map.getStyle().layers.find(l => l.layout && l.layout['text-font']) || {layout: {'text-font': ['Montserrat Regular']}}).layout['text-font'];
+  if (!map.getSource('wcam')) map.addSource('wcam', {type: 'geojson', data: camGeo()});
+  map.addLayer({id: 'wcam-dot', type: 'circle', source: 'wcam', paint: {'circle-color': '#2fe07a', 'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 2.5, 10, 5, 14, 8], 'circle-stroke-color': '#06110a', 'circle-stroke-width': 1.5, 'circle-opacity': .95}});
+  if (map.getStyle().glyphs) map.addLayer({id: 'wcam-label', type: 'symbol', source: 'wcam', minzoom: 11.5, layout: {'text-field': ['get', 'n'], 'text-font': font, 'text-size': 11, 'text-offset': [0, 1.1], 'text-anchor': 'top', 'text-max-width': 12, 'text-optional': true},
+    paint: {'text-color': '#3cff8a', 'text-halo-color': '#000', 'text-halo-width': 1.4}});
+  map.on('click', 'wcam-dot', e => { const f = e.features && e.features[0]; if (f) openSel({type: 'wcam', i: f.properties.i}); });
+  map.on('mouseenter', 'wcam-dot', () => { map.getCanvas().style.cursor = 'pointer'; });
+  map.on('mouseleave', 'wcam-dot', () => { map.getCanvas().style.cursor = ''; });
+}
+function openStreet(lon, lat, mz) {
+  if (ST.open || ST.loading) return; ST.loading = true; stopSpin();
+  loadMapLibre(() => {
+    ST.loading = false; ST.open = true; const el = $('mapView'); el.hidden = false; $('bGlobe').hidden = false;
+    if (!ST.map) {
+      ST.map = new maplibregl.Map({container: el, style: ST_STYLE, center: [lon, lat], zoom: mz, attributionControl: {compact: true}, dragRotate: false, pitchWithRotate: false});
+      ST.map.on('load', () => addStreetLayers(ST.map));
+      ST.map.on('zoomend', () => { if (ST.open && ST.map.getZoom() < 5.2) closeStreet(); });
+    } else { ST.map.resize(); ST.map.jumpTo({center: [lon, lat], zoom: mz}); const src = ST.map.getSource('wcam'); if (src) src.setData(camGeo()); }
+  });
+}
+function closeStreet() {
+  if (!ST.open) return; ST.open = false; const c = ST.map.getCenter(), z = ST.map.getZoom();
+  $('mapView').hidden = true; $('bGlobe').hidden = true;
+  S.rot = [-c.lng, -c.lat, 0]; S.zoom = Math.min(ZMAX * .6, mercToGlobeZoom(Math.min(6, Math.max(3, z - 1.5)))); ST.cool = Date.now() + 1500; S.zoomTarget = null; S.vel = [0, 0]; S.baseDirty = true;
+}
+setTimeout(() => { $('bGlobe').onclick = closeStreet; }, 0);
+setInterval(() => { if (!ST.open && !ST.loading && !(ST.cool > Date.now()) && !fly && pointers.size === 0 && (globeZoomToMerc() >= 6.3 || S.zoom >= ZMAX * .85)) openStreet(-S.rot[0], -S.rot[1], Math.max(6.5, globeZoomToMerc())); }, 250);
+
 oc.addEventListener('pointerdown', e => {
   oc.setPointerCapture(e.pointerId); pointers.set(e.pointerId, [e.clientX, e.clientY]);
   if (pointers.size === 1) {
@@ -1450,8 +1496,10 @@ function renderSheet() {
     else view = `<div style="${box}"><img id="camImg" alt="" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:contain"></div>`;
     body.innerHTML = view + `<div id="camMsg" class="note" style="margin-top:0"></div>`
       + row('Source', src) + (country ? row('Country', country) : '')
+      + `<button id="camStreet" class="cta" style="display:block;width:100%;margin-bottom:8px;background:transparent;color:var(--gold);border:1px solid var(--gold)">Show on the street map</button>`
       + `<a class="cta" style="display:block;text-decoration:none" href="${esc(ext || url)}" target="_blank" rel="noopener">Open on the provider's site ↗</a>`
       + `<div class="note">Public cameras published by road authorities, cities and webcam owners; snapshots refresh every few seconds to minutes, streams play live when the owner allows embedding. Camera index: OSIRIS (osirisai.live, open source, MIT).</div>`;
+    $('camStreet').onclick = () => { if (ST.open && ST.map) ST.map.flyTo({center: [lng, lat], zoom: 15}); else openStreet(lng, lat, 15); };
     const msg = t => { const m = $('camMsg'); if (m) m.textContent = t; };
     if (!insecure && (type === 'jpg' || type === 'mjpeg' || type === '')) {
       const img = $('camImg'), load = () => { if (!$('camImg')) { clearInterval(S.camTimer); return; } img.src = type === 'mjpeg' ? url : url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now(); };
