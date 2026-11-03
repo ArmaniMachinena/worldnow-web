@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
-<script>window.WN_BUILD="20261103123208";</script>
+<script>window.WN_BUILD="20261103125102";</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>World Now</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -1269,7 +1269,35 @@ function loadMapLibre(cb) {
   next(0);
 }
 function camGeo() { return {type: 'FeatureCollection', features: WCAM.map((c, i) => ({type: 'Feature', geometry: {type: 'Point', coordinates: [c[1], c[0]]}, properties: {i, n: c[2] || ''}}))}; }
+function hazardGeo() {
+  const fc = f => ({type: 'FeatureCollection', features: f});
+  return {
+    fire: fc(FIRES.map((f, i) => ({type: 'Feature', geometry: {type: 'Point', coordinates: [f[1], f[0]]}, properties: {i, p: f[2]}}))),
+    quake: fc(quakesAll.map((q, i) => ({type: 'Feature', geometry: {type: 'Point', coordinates: q.ll}, properties: {i, m: q.m}}))),
+    event: fc(events.map((e, i) => ({type: 'Feature', geometry: {type: 'Point', coordinates: e.ll}, properties: {i}})))
+  };
+}
+function streetVis() { const map = ST.map; if (!map || !map.getLayer('st-fire')) return;
+  const v = on => on ? 'visible' : 'none';
+  map.setLayoutProperty('st-fire', 'visibility', v(S.layers.fires)); map.setLayoutProperty('st-quake', 'visibility', v(S.layers.quakes)); map.setLayoutProperty('st-event', 'visibility', v(S.layers.events));
+  ['wcam-dot', 'wcam-label'].forEach(id => { if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', v(S.layers.cams)); });
+  map.setFilter('st-quake', ['>=', ['get', 'm'], S.minMag]); }
+function addHazardLayers(map) {
+  const g = hazardGeo();
+  for (const k in g) if (!map.getSource('st-' + k)) map.addSource('st-' + k, {type: 'geojson', data: g[k]});
+  map.addLayer({id: 'st-fire', type: 'circle', source: 'st-fire', paint: {'circle-color': ['case', ['>=', ['get', 'p'], 40], '#ee5545', '#f98c33'],
+    'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, ['case', ['>=', ['get', 'p'], 40], 3.5, 2.5], 10, ['case', ['>=', ['get', 'p'], 40], 8, 6], 15, 12],
+    'circle-blur': .25, 'circle-opacity': .9, 'circle-stroke-color': '#2a0a00', 'circle-stroke-width': 1}});
+  map.addLayer({id: 'st-quake', type: 'circle', source: 'st-quake', paint: {'circle-color': 'rgba(249,214,77,.25)', 'circle-stroke-color': '#f9d64d', 'circle-stroke-width': 2,
+    'circle-radius': ['interpolate', ['linear'], ['get', 'm'], 2.5, 6, 5, 14, 7, 26]}});
+  map.addLayer({id: 'st-event', type: 'circle', source: 'st-event', paint: {'circle-color': 'rgba(92,140,255,.35)', 'circle-stroke-color': '#7aa2ff', 'circle-stroke-width': 2, 'circle-radius': 9}});
+  const pick = (id, f) => { map.on('click', id, e => { const x = e.features && e.features[0]; if (x) f(x.properties.i); });
+    map.on('mouseenter', id, () => { map.getCanvas().style.cursor = 'pointer'; }); map.on('mouseleave', id, () => { map.getCanvas().style.cursor = ''; }); };
+  pick('st-fire', i => openSel({type: 'fire', i})); pick('st-quake', i => openSel({type: 'quake', q: quakesAll[i]})); pick('st-event', i => openSel({type: 'event', e: events[i]}));
+  streetVis();
+}
 function addStreetLayers(map) {
+  addHazardLayers(map);
   const font = (map.getStyle().layers.find(l => l.layout && l.layout['text-font']) || {layout: {'text-font': ['Montserrat Regular']}}).layout['text-font'];
   if (!map.getSource('wcam')) map.addSource('wcam', {type: 'geojson', data: camGeo()});
   map.addLayer({id: 'wcam-dot', type: 'circle', source: 'wcam', paint: {'circle-color': '#2fe07a', 'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 2.5, 10, 5, 14, 8], 'circle-stroke-color': '#06110a', 'circle-stroke-width': 1.5, 'circle-opacity': .95}});
@@ -1287,8 +1315,8 @@ function openStreet(lon, lat, mz) {
       ST.map = new maplibregl.Map({container: el, style: ST_STYLE, center: [lon, lat], zoom: mz, attributionControl: {compact: true}, dragRotate: false, pitchWithRotate: false});
       ST.map.on('load', () => addStreetLayers(ST.map));
       ST.map.on('zoomend', () => { if (ST.open && ST.map.getZoom() < 5.2) closeStreet(); });
-      ST.map.on('moveend', updateCards); ST.map.on('load', updateCards);
-    } else { ST.map.resize(); ST.map.jumpTo({center: [lon, lat], zoom: mz}); const src = ST.map.getSource('wcam'); if (src) src.setData(camGeo()); setTimeout(updateCards, 300); }
+      ST.map.on('moveend', () => { streetVis(); updateCards(); }); ST.map.on('load', updateCards);
+    } else { ST.map.resize(); ST.map.jumpTo({center: [lon, lat], zoom: mz}); const src = ST.map.getSource('wcam'); if (src) src.setData(camGeo()); streetVis(); setTimeout(updateCards, 300); }
   });
 }
 
@@ -1389,7 +1417,7 @@ function handleTap(x, y) {
   if (S.layers.cams) for (let i = 0; i < WCAM.length; i++) { const p = PV(wcamVec[i * 3], wcamVec[i * 3 + 1], wcamVec[i * 3 + 2], 1); if (p) near(p[0], p[1], {type: 'wcam', i}, 10, .9); }
   if (S.layers.events) for (const e of events) { const p = P(e.ll[0], e.ll[1]); if (p) near(p[0], p[1], {type: 'event', e}, 15, 1.2); }
   if (S.layers.quakes) for (const q of quakes()) { const p = P(q.ll[0], q.ll[1]); if (p) near(p[0], p[1], {type: 'quake', q}, 14, 1); }
-  if (S.layers.fires) for (let i = 0; i < FIN; i++) { const p = PV(fireVec[i * 3], fireVec[i * 3 + 1], fireVec[i * 3 + 2], 1); if (p) near(p[0], p[1], {type: 'fire', i}, 8, .6); }
+  if (S.layers.fires) for (let i = 0; i < FIN; i++) { const p = PV(fireVec[i * 3], fireVec[i * 3 + 1], fireVec[i * 3 + 2], 1); if (p) near(p[0], p[1], {type: 'fire', i}, matchMedia('(pointer: coarse)').matches ? 20 : 13, .8); }
   if (!best && S.layers.sats) for (let i = 0; i < SN; i++) { if (!S.satGroups[satGroupIdx[i]]) continue; const k = i * SF; if (satPos[k] !== satPos[k]) continue; const p = PV(satPos[k + 3], satPos[k + 4], satPos[k + 5], (RE + satPos[k + 2]) / RE); if (p) near(p[0], p[1], {type: 'sat', i}, 6, .4); }
   if (best) { S.pin = null; openSel(best.sel); return; }
   // A plain tap on empty map never opens anything; it only closes an open card
@@ -1491,8 +1519,10 @@ function renderSheet() {
     $('shKick').textContent = 'Active fire · NASA FIRMS (MODIS)'; $('shTitle').textContent = rg ? `Fire in ${rg.properties.n}` : cc ? `Fire in ${C[cc].n}` : 'Fire hotspot'; $('shCo').textContent = coordStr(ll);
     body.innerHTML = row('Detected', f[4] + ' UTC') + row('Fire radiative power', nf(f[2], 1) + ' MW') + row('Confidence', f[3] + ' %') + row('Pass', f[5] === 'D' ? 'Daytime' : 'Night-time')
       + (cc ? row('Country', `${C[cc].flag} ${C[cc].n}`) : '') + `<div class="note">Thermal hotspot seen by NASA's Terra/Aqua satellites in the past 24 hours. Larger red dots burn hotter (40 MW and above). It can also be a gas flare or industrial heat source.</div>`
+      + `<button id="fireStreet" class="cta" style="display:block;width:100%;margin:8px 0">Show the exact place on the street map</button>`
       + `<a class="lnk" href="https://firms.modaps.eosdis.nasa.gov/map/#d:24hrs;@${f[1]},${f[0]},9z" target="_blank" rel="noopener">Open in NASA FIRMS ↗</a>` + lookBtn();
     $('lookHere').onclick = () => openPoint(ll);
+    $('fireStreet').onclick = () => { if (ST.open && ST.map) ST.map.flyTo({center: ll, zoom: 13}); else openStreet(ll[0], ll[1], 13); };
   } else if (s.type === 'radar') {
     const st = radarStatus(), col = ['#4fd27a', '#f9d64d', '#ee5545'][st.level], w = watched();
     $('shKick').textContent = 'World pulse · 10 key outlets'; $('shTitle').textContent = ['GREEN · calm', 'YELLOW · gaining momentum', 'RED · spreading worldwide'][st.level];
@@ -1764,7 +1794,7 @@ function renderQuick() {
   $('qrail').innerHTML = QUICK.map(q => q === '-' ? '<div class="qsep"></div>' : `<button class="qb ${isOn(q[0]) ? 'on' : ''}" data-k="${q[0]}" title="${q[1]}" aria-pressed="${!!isOn(q[0])}"><span class="qi"><svg viewBox="0 0 24 24" fill="currentColor">${QI[q[0]]}</svg></span><span class="qt">${q[1]}</span>${q[2] ? `<span class="qn">${shortN(q[2]())}</span>` : ''}</button>`).join('');
   $('ticker').hidden = !S.layers.rates; $('legend').hidden = !S.layers.quakes;
 }
-$('qrail').addEventListener('click', e => { const b = e.target.closest('.qb'); if (!b) return; const k = b.dataset.k;
+$('qrail').addEventListener('click', e => { const b = e.target.closest('.qb'); if (!b) return; const k = b.dataset.k; setTimeout(() => { try { streetVis(); updateCards(); } catch (err) {} }, 0);
   if (k === 'iwm' && S.layers.iwm && !(S.sel && S.sel.type === 'iwm')) { openSel({type: 'iwm'}); renderQuick(); return; }
   if (k === 'iwm' && S.layers.iwm) closeSheet();
   if (k === 'sos') { if (S.sel && S.sel.type === 'sos') closeSheet(); else openSel({type: 'sos'}); renderQuick(); return; }
