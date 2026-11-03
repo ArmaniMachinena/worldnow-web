@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
-<script>window.WN_BUILD="20261103122204";</script>
+<script>window.WN_BUILD="20261103123208";</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>World Now</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -577,16 +577,19 @@ function threatIndex() {
 const FEEDBACK_URL = 'https://formspree.io/f/maeelzbw'; // Formspree endpoint, e.g. https://formspree.io/f/xxxxxxx; empty = GitHub issue
 const ABOUT = {
   en: {kick: 'About', title: 'About World Now', sec: ['What this is', 'Sources', 'Disclaimer', 'Other systems', 'Your opinion'],
+    who: 'A private, public-interest portal for anyone on Earth, whatever their citizenship. When you enter, you choose your country, and the portal gathers the context you actually need, in the languages spoken there.',
     what: ['This portal is built on free information published on the internet through open APIs.', 'It gathers context: official information, addresses and contacts of ministries and agencies, embassies and consulates of different countries; the situation as reported by key national news portals; transport (flights, ships, cameras); weather, earthquakes, fires and disasters.'],
     discl: ['Use this information personally, for contextual search only.', 'Do not use it to make decisions, do not sell it, and do not show it to other users.', 'Data may be incomplete, delayed or wrong. Always check official sources.'],
     other: 'Iran War Monitor and similar services are separate systems that work on their own. World Now links to them and combines open sources to give a full contextual picture; it does not control their content.',
     fb: 'If you do not like how the system works, or have an idea how to improve it, press the feedback button and send your suggestion. If it does not suit you, simply stop using it and delete it.', btn: 'Send feedback'},
   ru: {kick: 'О портале', title: 'О World Now', sec: ['Что это', 'Источники', 'Отказ от обязательств', 'Другие системы', 'Ваше мнение'],
+    who: 'Частный общественный портал для любого жителя Земли, независимо от гражданства. При входе вы выбираете свою страну, и портал собирает именно ту контекстную информацию, которая вам нужна, на языках, которые преобладают в этой стране.',
     what: ['Этот портал создан на свободной информации, которая публикуется в интернете через открытые API.', 'Он собирает контекст: официальную информацию, адреса и контакты министерств и ведомств, посольств и консульств разных стран; ситуацию, которую публикуют ключевые новостные порталы стран; транспорт (самолёты, суда, камеры); погоду, землетрясения, пожары и стихийные бедствия.'],
     discl: ['Используйте эту информацию лично для себя, для контекстного поиска.', 'Не для принятия решений, не для продажи и не для показа другим пользователям.', 'Данные могут быть неполными, запаздывать или содержать ошибки. Всегда сверяйтесь с официальными источниками.'],
     other: 'Iran War Monitor и подобные сервисы — отдельные системы, которые работают автономно. World Now ссылается на них и объединяет открытые источники, чтобы сложилась полная контекстная картина; за их содержание он не отвечает.',
     fb: 'Если вам не нравится, как работает система, или вы знаете, как её улучшить, нажмите кнопку обратной связи и отправьте своё предложение. Если система вам не подходит, просто не пользуйтесь ей и удалите её.', btn: 'Оставить отзыв'},
   kk: {kick: 'Портал туралы', title: 'World Now туралы', sec: ['Бұл не', 'Дереккөздер', 'Міндеттемеден бас тарту', 'Басқа жүйелер', 'Сіздің пікіріңіз'],
+    who: 'Азаматтығына қарамастан, Жердің кез келген тұрғынына арналған жеке қоғамдық портал. Кірген кезде еліңізді таңдайсыз, ал портал сізге шынымен қажет контекстік ақпаратты сол елде басым тілдерде жинайды.',
     what: ['Бұл портал интернетте ашық API арқылы жарияланатын еркін ақпаратқа негізделген.', 'Ол контекст жинайды: министрліктер мен ведомстволардың, әр елдің елшіліктері мен консулдықтарының ресми ақпараты, мекенжайлары мен байланыстары; елдердің негізгі жаңалық порталдары жариялайтын жағдай; көлік (ұшақтар, кемелер, камералар); ауа райы, жер сілкінісі, өрт және табиғи апаттар.'],
     discl: ['Бұл ақпаратты тек өзіңіз үшін, контекстік іздеу үшін пайдаланыңыз.', 'Шешім қабылдау, сату немесе басқа пайдаланушыларға көрсету үшін емес.', 'Деректер толық емес, кешіккен немесе қате болуы мүмкін. Әрқашан ресми дереккөздермен тексеріңіз.'],
     other: 'Iran War Monitor және сол сияқты сервистер — дербес жұмыс істейтін бөлек жүйелер. World Now оларға сілтеме береді және толық контекстік көрініс қалыптасу үшін ашық дереккөздерді біріктіреді; олардың мазмұнына жауап бермейді.',
@@ -595,8 +598,8 @@ const ABOUT = {
 const ABOUT_SRC = ['Aircraft: OpenSky Network', 'Earthquakes: USGS', 'Fires: NASA FIRMS', 'Disasters: GDACS, NASA EONET', 'Satellites: CelesTrak', 'Weather: Open-Meteo', 'Economy: World Bank; rates: ExchangeRate-API, National Bank of Kazakhstan', 'Country risks: US State Department, WHO, IODA (Georgia Tech)', 'Sirens: Tzofar / Home Front Command; launch estimates: Under Fire', 'News: national agencies, BBC, Reuters, AP and other key outlets', 'Embassies: MFA of Kazakhstan (gov.kz); other countries: Wikidata via database-of-embassies', 'Cameras: road authorities and public webcams, index via OSIRIS (open source)', 'Maps: Natural Earth, OpenStreetMap, CARTO'];
 function aboutHTML() {
   const A = ABOUT[window.WN_LANG] || ABOUT.en, li = t => `<div style="font-size:13.5px;line-height:1.5;padding:3px 0">• ${esc(t)}</div>`;
-  return `<div class="kick sec" style="margin-top:2px">${A.sec[0]}</div>` + A.what.map(t => `<div style="font-size:14px;line-height:1.55;padding:3px 0">${esc(t)}</div>`).join('')
-    + `<div class="kick sec">${A.sec[1]}</div>` + ABOUT_SRC.map(li).join('')
+  return `<div style="border:1px solid rgba(92,205,242,.55);background:rgba(92,205,242,.07);border-radius:10px;padding:10px 12px;margin:2px 0 4px;font-size:14.5px;line-height:1.55;font-weight:600">${esc(A.who)}</div>`
+    + `<div class="kick sec">${A.sec[0]}</div>` + A.what.map(t => `<div style="font-size:14px;line-height:1.55;padding:3px 0">${esc(t)}</div>`).join('')
     + `<div class="kick sec">${A.sec[2]}</div><div style="border:1px solid rgba(238,85,69,.6);background:rgba(238,85,69,.08);border-radius:10px;padding:8px 12px">${A.discl.map(li).join('')}</div>`
     + `<div class="kick sec">${A.sec[3]}</div><div style="font-size:13.5px;line-height:1.5">${esc(A.other)}</div>`
     + `<div class="kick sec">${A.sec[4]}</div><div style="font-size:13.5px;line-height:1.5;margin-bottom:10px">${esc(A.fb)}</div>`
@@ -1534,7 +1537,7 @@ function renderSheet() {
     body.querySelectorAll('[data-iwm]').forEach(i => i.onchange = () => { IWM_OPTS[i.dataset.iwm] = i.checked; if (i.dataset.iwm === 'arcs') { S.layers.threats = i.checked; renderQuick(); } S.baseDirty = true; renderSheet(); });
   } else if (s.type === 'about') {
     const A = ABOUT[window.WN_LANG] || ABOUT.en;
-    $('shKick').textContent = A.kick; $('shTitle').textContent = A.title; $('shCo').textContent = 'Open data · open APIs';
+    $('shKick').textContent = A.kick; $('shTitle').textContent = A.title; $('shCo').textContent = '';
     body.innerHTML = aboutHTML(); $('aboutFb').onclick = () => openSel({type: 'feedback'});
   } else if (s.type === 'feedback') {
     $('shKick').textContent = 'Feedback'; $('shTitle').textContent = 'Send feedback'; $('shCo').textContent = '';
