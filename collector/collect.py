@@ -331,6 +331,7 @@ def fires(p):
     p['firesSrc'] = 'VIIRS NOAA-20' if key else 'MODIS'
 
 
+WARWORDS = re.compile(r'strike|attack|drone|missile|rocket|explos|blast|shell|bomb|airstrike|tanker|vessel|ship|war|troops|army|military|killed|clash|fighting|offensive|raid|artillery')
 GDELT_ROOTS = {'18': 'assault', '19': 'fight', '20': 'mass violence'}
 
 
@@ -347,7 +348,7 @@ def incidents(p):
     """Geolocated violent events (CAMEO 18-20: assaults, fights, mass violence) from the GDELT 2.0 event export,
     every 15-minute file since the last run, kept for 24 h and grouped by place."""
     import zipfile
-    raw = load('incidents_hist.json')
+    raw = load('incidents_hist2.json')
     events, last = raw.get('events', []), raw.get('last', '')
     now = datetime.now(timezone.utc)
     t = now - timedelta(minutes=now.minute % 15 + 15, seconds=now.second, microseconds=now.microsecond)
@@ -368,6 +369,12 @@ def incidents(p):
             c = line.split('\t')
             if len(c) < 61 or c[28] not in GDELT_ROOTS or not c[56] or not c[57]:
                 continue
+            # armed-conflict codes only (bombings, military force, small arms, artillery, air strikes, ceasefire breaches,
+            # assassinations, mass violence), city-level places only, and a war-like word in the article address
+            if not c[26].startswith(('183', '186', '190', '193', '194', '195', '196', '20')) or c[51] not in ('3', '4'):
+                continue
+            if not WARWORDS.search(c[60].lower()):
+                continue
             try:
                 events.append([int(datetime.strptime(c[59], '%Y%m%d%H%M%S').replace(tzinfo=timezone.utc).timestamp()),
                                round(float(c[56]), 2), round(float(c[57]), 2), c[52][:80], c[28], int(c[32] or 1), c[60]])
@@ -376,7 +383,7 @@ def incidents(p):
         last = max(last, st); got += 1
     cut = NOW - 24 * 3600
     events = [e for e in events if e[0] > cut]
-    save('incidents_hist.json', {'events': events, 'last': last})
+    save('incidents_hist2.json', {'events': events, 'last': last})
     groups = {}
     for e in events:
         k = (round(e[1], 1), round(e[2], 1))
