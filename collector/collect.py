@@ -209,7 +209,7 @@ def sirens(p):
                 if (row[0], row[3]) not in seen:
                     seen.add((row[0], row[3]))
                     new.append(row)
-    cut = NOW - 45 * 86400
+    cut = NOW - 120 * 86400
     p['alerts'] = sorted([a for a in old + new if a[0] > cut], key=lambda a: -a[0])
     log(f'     sirens +{len(new)} -> {len(p["alerts"])}')
 
@@ -339,7 +339,7 @@ def weather(p):
         q = {
             'latitude': ','.join(str(WMO_PTS[c][0]) for c in part),
             'longitude': ','.join(str(WMO_PTS[c][1]) for c in part),
-            'current': 'temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure,is_day',
+            'current': 'temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,is_day',
             'daily': 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum',
             'timezone': 'auto', 'wind_speed_unit': 'ms', 'forecast_days': 7,
         }
@@ -350,7 +350,7 @@ def weather(p):
             c, dl = w['current'], w['daily']
             res[cc] = {'tz': w.get('timezone'), 't': c['time'],
                        'c': [c['temperature_2m'], c['apparent_temperature'], c['relative_humidity_2m'], c['weather_code'],
-                             c['wind_speed_10m'], c['wind_direction_10m'], c['surface_pressure'], c['is_day']],
+                             c['wind_speed_10m'], c['wind_direction_10m'], c["pressure_msl"], c['is_day']],
                        'd': [dl['time'], dl['weather_code'], dl['temperature_2m_max'], dl['temperature_2m_min'], dl['precipitation_sum']]}
     p['weather'] = res
     p['weatherAt'] = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M')
