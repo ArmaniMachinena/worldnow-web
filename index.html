@@ -47,6 +47,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-o
 #ticker{display:flex;gap:12px;align-items:center;padding:9px 12px;cursor:pointer;font-family:var(--f-mono);font-size:11.5px;flex-wrap:wrap}
 #ticker .tg{color:var(--gold);font-weight:700;font-size:14px}
 #ticker span em{font-style:normal;color:var(--dim);font-size:10px;margin-right:4px}
+#bNuke{font-family:var(--f-mono);font-size:11px;font-weight:800;letter-spacing:.12em;color:#ffd64d;border-color:rgba(255,214,77,.5);padding:8px 12px;cursor:pointer}#bNuke.on{background:#ffd64d;color:#0a0a0a}
 #hint{font-family:var(--f-mono);font-size:11px;color:var(--dim);padding:7px 10px;max-width:330px}
 /* popover (layers / search) */
 .pop{position:absolute;right:calc(68px + env(safe-area-inset-right,0px));top:50%;transform:translateY(-50%);width:min(340px,calc(100vw - 100px));z-index:7;padding:14px;max-height:min(560px,80%);overflow:auto}
@@ -219,6 +220,7 @@ canvas.layer{position:absolute;inset:0;width:100%;height:100%;display:block;poin
     <div id="hint" class="panel">Tap a plane, quake, fire or event for details. Press and hold on the map for weather and country. Zoom in for regions, cities and flight numbers.</div>
     <div id="legend" class="panel" hidden><span>Earthquakes:</span><span>now</span><span class="bar"></span><span>7 days</span></div>
     <button id="ticker" class="panel" aria-label="Exchange rates to tenge"></button>
+    <button id="bNuke" class="panel" title="Experimental">☢ TEST NUCLEAR</button>
   </div>
 
   <section id="popLayers" class="pop panel" hidden>
@@ -326,7 +328,7 @@ function get(p){ return fetch(url(p),{cache:'default'}).then(function(r){return 
 function merge(a){ var D=window.WN_DATA, TS=window.WN_TS=window.WN_TS||{ships:[],alerts:[],threat:{},recent:{events:[]}}, f=a[0], m=a[1], w=a[2], s=a[3];
   var ok=false;
   if(f){ ok=true; ['flights','flightsAt','quakes','quakesRef','quakesGen'].forEach(function(k){ if(f[k]!==undefined) D[k]=f[k]; });
-    if(f.alerts) TS.alerts=f.alerts; if(f.recent) TS.recent=f.recent; if(f.radar) window.WN_RADAR=f.radar; window.WN_LIVE_AT=f.gen; }
+    if(f.alerts) TS.alerts=f.alerts; if(f.nkwind) window.WN_NKWIND=f.nkwind; if(f.recent) TS.recent=f.recent; if(f.radar) window.WN_RADAR=f.radar; window.WN_LIVE_AT=f.gen; }
   if(m){ ['gdacs','events','fires','news'].forEach(function(k){ if(m[k]) D[k]=m[k]; }); }
   if(w&&w.weather){ D.weather=w.weather; D.weatherAt=w.weatherAt; }
   if(s){ ['sats','tle','satEpochNote','rates','ratesUpd','nbk','nbkDate'].forEach(function(k){ if(s[k]) D[k]=s[k]; }); if(s.risk) window.WN_RISK=s.risk; }
@@ -883,6 +885,90 @@ function drawCam(ctx, x, y) {
   ctx.beginPath(); ctx.arc(x - 2, y, 2.2, 0, 7); ctx.fill();
 }
 
+/* ---------- TEST NUCLEAR: experimental fallout-direction scheme (not a forecast) ---------- */
+const NK = {t: [51.94, 33.68], wind: null, windErr: false};
+const NK_SC = [
+  {k: 'E', col: '#f9d64d', path: [[56, 33.4], [61, 33.2], [66.5, 33]], lab: 'E · westerlies · most likely in November', ru: 'В · западный перенос · наиболее вероятно в ноябре', where: 'Afghanistan, Pakistan'},
+  {k: 'SE', col: '#5ccdf2', path: [[54.5, 31.5], [57, 29.5], [57.6, 25.8]], lab: 'SE · shamal (wind from NW)', ru: 'ЮВ · шамаль (дует с СЗ)', where: 'Kerman, Hormozgan, Strait of Hormuz, Oman; UAE possible'},
+  {k: 'N', col: '#f98c33', path: [[51.6, 34.4], [51.2, 35.1], [51.4, 35.9]], lab: 'N · southerly wind: Qom, Tehran (10M+)', ru: 'С · при южном ветре: Кум, Тегеран (10+ млн)', where: 'Qom, Tehran'},
+  {k: 'NE', col: '#b48cff', path: [[55.5, 35], [58.6, 36.6], [60.5, 38.2]], lab: 'NE · southwesterly wind: Khorasan, Turkmenistan', ru: 'СВ · при юго-западном ветре: Хорасан, Туркменистан', where: 'Khorasan, Turkmenistan; South Kazakhstan 1500+ km — unlikely, heavily diluted', ext: [[64, 40], [69.6, 42.3]]}
+];
+const dest = (ll, brg, km) => { const R = 6371, d = km / R, b = brg * RAD, f1 = ll[1] * RAD, l1 = ll[0] * RAD;
+  const f2 = Math.asin(Math.sin(f1) * Math.cos(d) + Math.cos(f1) * Math.sin(d) * Math.cos(b));
+  const l2 = l1 + Math.atan2(Math.sin(b) * Math.sin(d) * Math.cos(f1), Math.cos(d) - Math.sin(f1) * Math.sin(f2)); return [l2 / RAD, f2 / RAD]; };
+function nkLine(ctx, pts, col, w, dash) { ctx.beginPath(); let pen = false; for (const q of pts) { const p = P(q[0], q[1]); if (!p) { pen = false; continue; } if (pen) ctx.lineTo(p[0], p[1]); else ctx.moveTo(p[0], p[1]); pen = true; }
+  ctx.strokeStyle = col; ctx.lineWidth = w; ctx.setLineDash(dash || []); ctx.stroke(); ctx.setLineDash([]); }
+function nkDense(path) { const all = [NK.t, ...path], out = []; for (let i = 0; i < all.length - 1; i++) for (let k = 0; k < 12; k++) { const a = all[i], b = all[i + 1], f = k / 12; out.push([a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]); } out.push(all[all.length - 1]); return out; }
+function drawNuke(ctx, nowMs) {
+  // distance rings
+  for (const km of [500, 1000, 1500]) { const ring = []; for (let a = 0; a <= 360; a += 6) ring.push(dest(NK.t, a, km)); nkLine(ctx, ring, 'rgba(255,255,255,.28)', 1, [3, 5]);
+    const lp = P(...dest(NK.t, 200, km)); if (lp) { ctx.font = '600 9px ' + MONO; ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.textAlign = 'center'; ctx.fillText(km + ' km', lp[0], lp[1]); } }
+  // plume fans
+  for (const sc of NK_SC) {
+    const pts = nkDense(sc.path), L = [], Rr = [];
+    pts.forEach((q, i) => { const n = pts[Math.min(i + 1, pts.length - 1)], pv = pts[Math.max(i - 1, 0)]; let dx = n[0] - pv[0], dy = n[1] - pv[1]; const m = Math.hypot(dx, dy) || 1; dx /= m; dy /= m;
+      const w = 0.15 + i / pts.length * 2.2; L.push([q[0] - dy * w, q[1] + dx * w]); Rr.push([q[0] + dy * w, q[1] - dx * w]); });
+    const poly = [...L, ...Rr.reverse()].map(q => { const p = P(q[0], q[1]); return p ? [p[0], p[1]] : null; });
+    if (poly.every(Boolean)) { ctx.beginPath(); poly.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath(); ctx.fillStyle = sc.col + '30'; ctx.fill(); }
+    nkLine(ctx, pts, sc.col, 2.4);
+    if (sc.ext) nkLine(ctx, [sc.path[sc.path.length - 1], ...sc.ext], sc.col + '99', 1.4, [5, 5]);
+    const tip0 = P(...sc.path[sc.path.length - 1]), tip = tip0 && [tip0[0], tip0[1]], pre0 = P(...sc.path[sc.path.length - 2]), pre = pre0 && [pre0[0], pre0[1]];
+    if (tip && pre) { const a = Math.atan2(tip[1] - pre[1], tip[0] - pre[0]); ctx.beginPath(); ctx.moveTo(tip[0], tip[1]); ctx.lineTo(tip[0] - 11 * Math.cos(a - .45), tip[1] - 11 * Math.sin(a - .45)); ctx.lineTo(tip[0] - 11 * Math.cos(a + .45), tip[1] - 11 * Math.sin(a + .45)); ctx.closePath(); ctx.fillStyle = sc.col; ctx.fill();
+      ctx.font = '700 10.5px ' + MONO; ctx.textAlign = Math.cos(a) < -0.3 ? 'right' : 'left'; ctx.textBaseline = 'middle'; const tx = tip[0] + (Math.cos(a) < -0.3 ? -8 : 8), ty = tip[1] + (Math.sin(a) < -0.5 ? -10 : 10);
+      const txt = W < 700 ? (({E: 'E', SE: 'SE', N: 'N', NE: 'NE'})[sc.k] + ((window.WN_LANG === 'ru' || window.WN_LANG === 'kk') ? ({E: ' · вероятно', SE: ' · шамаль', N: ' · Тегеран', NE: ' · Туркменистан'})[sc.k] : ({E: ' · likely', SE: ' · shamal', N: ' · Tehran', NE: ' · Turkmenistan'})[sc.k])) : (window.WN_LANG === 'ru' || window.WN_LANG === 'kk') ? sc.ru : sc.lab; const w = ctx.measureText(txt).width;
+      ctx.fillStyle = 'rgba(0,0,0,.72)'; ctx.fillRect(ctx.textAlign === 'right' ? tx - w - 4 : tx - 4, ty - 8, w + 8, 16); ctx.fillStyle = sc.col; ctx.fillText(txt, tx, ty); }
+  }
+  // live wind at ~1.5 km (850 hPa): where the air goes in 12 h
+  if (NK.wind) { const w = NK.wind; const to = (w.d850 + 180) % 360, km = w.s850 * 12; const end = dest(NK.t, to, km), mid = dest(NK.t, to, km / 2);
+    nkLine(ctx, [NK.t, mid, end], '#ffffff', 2.2, [7, 4]); const e = P(...end); if (e) { ctx.font = '700 10px ' + MONO; ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText('NOW 850 hPa → ' + Math.round(km) + ' km / 12 h', e[0] + 8, e[1]); } }
+  // target
+  const p = P(NK.t[0], NK.t[1]); if (!p) return; const k = (nowMs % 1600) / 1600;
+  ctx.beginPath(); ctx.arc(p[0], p[1], 9 + k * 16, 0, 7); ctx.strokeStyle = `rgba(255,214,77,${1 - k})`; ctx.lineWidth = 2; ctx.stroke();
+  ctx.beginPath(); ctx.arc(p[0], p[1], 8, 0, 7); ctx.fillStyle = '#ffd64d'; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.font = '800 11px ' + MONO; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const lbl = (window.WN_LANG === 'ru' || window.WN_LANG === 'kk') ? 'ЦЕЛЬ: гора Пикакс (у Натанза)' : 'TARGET: Pickaxe Mt. (Natanz)'; const tw = ctx.measureText(lbl).width;
+  ctx.fillStyle = 'rgba(0,0,0,.85)'; ctx.fillRect(p[0] - tw / 2 - 6, p[1] + 16, tw + 12, 18); ctx.fillStyle = '#fff'; ctx.fillText(lbl, p[0], p[1] + 25);
+}
+const compass16 = d => ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'][Math.round(((d % 360) + 360) % 360 / 22.5) % 16];
+async function nkLoadWind() {
+  if (NK.wind || NK.loading) return; NK.loading = true;
+  try {
+    const pre = window.WN_NKWIND; const u = `https://api.open-meteo.com/v1/forecast?latitude=${NK.t[1]}&longitude=${NK.t[0]}&current=wind_speed_10m,wind_direction_10m&hourly=wind_speed_850hPa,wind_direction_850hPa,wind_speed_500hPa,wind_direction_500hPa&forecast_days=3&timezone=UTC`;
+    const d = pre && pre.hourly ? pre : await (await fetch(u)).json(); const h = d.hourly, now = new Date().toISOString().slice(0, 13); let i = h.time.findIndex(t => t.slice(0, 13) === now); if (i < 0) i = 0;
+    NK.wind = {s10: d.current.wind_speed_10m, d10: d.current.wind_direction_10m, s850: h.wind_speed_850hPa[i], d850: h.wind_direction_850hPa[i], s500: h.wind_speed_500hPa[i], d500: h.wind_direction_500hPa[i],
+      fc: h.time.map((t, j) => [t, h.wind_direction_850hPa[j], h.wind_speed_850hPa[j]]).filter((x, j) => j >= i && (j - i) % 12 === 0).slice(0, 6), at: h.time[i]};
+  } catch (e) { NK.windErr = true; }
+  NK.loading = false; S.baseDirty = true; if (S.sel && S.sel.type === 'nuke') renderSheet();
+}
+function nukeHTML() {
+  const ru = window.WN_LANG === 'ru' || window.WN_LANG === 'kk';
+  const T = (en, r) => ru ? r : en;
+  const w = NK.wind;
+  const windHTML = w ? `<div class="kick sec">${T('Wind at the site now', 'Ветер над объектом сейчас')} · ${esc(w.at.replace('T', ' '))} UTC</div>`
+      + [[T('Surface (10 m)', 'У земли (10 м)'), w.d10, w.s10], [T('~1.5 km (850 hPa): main fallout carrier', '~1,5 км (850 гПа): главный перенос осадков'), w.d850, w.s850], [T('~5.5 km (500 hPa): high cloud', '~5,5 км (500 гПа): верхнее облако'), w.d500, w.s500]]
+        .map(([n, dd, sp]) => row(n, `${T('from', 'с')} ${compass16(dd)} → ${T('toward', 'на')} ${compass16(dd + 180)} · ${Math.round(sp)} km/h`)).join('')
+      + `<div class="kick sec">${T('Forecast at ~1.5 km, every 12 h', 'Прогноз на ~1,5 км, каждые 12 ч')}</div>` + w.fc.map(([t, dd, sp]) => row(t.replace('T', ' ').slice(5, 16), `→ ${compass16(dd + 180)} · ${Math.round(sp)} km/h`)).join('')
+      + `<div class="note">${T('White dashed arrow on the map: where air at ~1.5 km would travel in 12 hours with the current wind. Source: Open-Meteo (ECMWF/GFS models).', 'Белая пунктирная стрелка на карте: куда за 12 часов унесёт воздух на высоте ~1,5 км при нынешнем ветре. Источник: Open-Meteo (модели ECMWF/GFS).')}</div>`
+    : `<div class="note">${NK.windErr ? T('Live wind could not be loaded here.', 'Живой ветер здесь загрузить не удалось.') : T('Loading live wind…', 'Загружаю живой ветер…')}</div>`;
+  return `<div style="background:#3a0d0a;border:1px solid #ee5545;border-radius:10px;padding:10px 12px;margin:4px 0 10px;color:#ffd1cc;font-weight:700;font-size:13.5px;line-height:1.45">⚠ ${T('EXPERIMENTAL PAGE. Please do not use or distribute this information.', 'ЭКСПЕРИМЕНТАЛЬНАЯ СТРАНИЦА. Пожалуйста, не используйте эту информацию для распространения.')}</div>`
+    + `<div style="font-size:13.5px;line-height:1.5;margin-bottom:6px"><b>${T('Only if a nuclear detonation occurs', 'Только если произойдёт ядерный взрыв')}</b> — ${T('a scheme, not a forecast. Which way the fallout goes is decided by the weather on the day.', 'это схема, а не прогноз. Куда понесёт осадки, решит погода в день удара.')}</div>`
+    + `<div class="kick sec">${T('Scenarios by wind', 'Сценарии по ветру')}</div>`
+    + NK_SC.map(sc => `<div style="display:flex;gap:9px;padding:5px 0;border-bottom:1px solid var(--edge)"><i style="flex:none;width:12px;height:12px;border-radius:3px;margin-top:3px;background:${sc.col}"></i><div style="font-size:13px;line-height:1.4"><b style="color:${sc.col}">${esc(ru ? sc.ru : sc.lab)}</b><br>${esc(sc.where)}</div></div>`).join('')
+    + windHTML
+    + `<div class="kick sec">${T('How to read it', 'Как читать')}</div>`
+    + [T('Rings: 500, 1000 and 1500 km from the target.', 'Кольца: 500, 1000 и 1500 км от цели.'),
+       T('Fallout is worst within the first 100–300 km and weakens fast with distance and time; rain brings it down locally.', 'Сильнее всего осадки в первые 100–300 км, дальше и со временем они быстро слабеют; дождь осаживает их локально.'),
+       T('A ground burst on a buried target lifts far more fallout than an air burst.', 'Наземный взрыв по заглублённому объекту поднимает гораздо больше осадков, чем воздушный.'),
+       T('Only a nuclear explosion spreads a plume this far. After the June 2025 conventional strikes the IAEA saw no rise in radiation outside the sites.', 'Шлейф так далеко даёт только ядерный взрыв. После обычных ударов в июне 2025 года МАГАТЭ не фиксировало роста радиации за пределами объектов.')]
+      .map(t => `<div style="font-size:13px;line-height:1.45;padding:2px 0">• ${t}</div>`).join('')
+    + `<div class="kick sec">${T('If it happens', 'Если это случится')}</div>`
+    + [T('Get indoors, ideally a basement or the middle of a building; close windows and ventilation.', 'Зайдите в помещение, лучше в подвал или в середину здания; закройте окна и вентиляцию.'),
+       T('Stay inside at least 24 hours unless authorities say otherwise: fallout radiation drops about tenfold in the first 7 hours.', 'Оставайтесь внутри минимум сутки, если власти не скажут иначе: радиация осадков падает примерно в 10 раз за первые 7 часов.'),
+       T('If you were outside: remove outer clothing, shower, do not scrub the skin.', 'Если были на улице: снимите верхнюю одежду, примите душ, не трите кожу.'),
+       T('Take potassium iodide only on the instruction of health authorities.', 'Йодид калия — только по указанию органов здравоохранения.'),
+       T('Follow local authorities and your embassy; see SOS.', 'Следуйте указаниям местных властей и посольства; см. SOS.')]
+      .map(t => `<div style="font-size:13px;line-height:1.45;padding:2px 0">• ${t}</div>`).join('')
+    + `<div class="note" style="margin-top:8px">${T('Why this point: in late October 2026 Tucker Carlson claimed a US strike on Pickaxe Mountain (Kuh-e Kolang Gaz La, near Natanz) was being considered. There is no official confirmation; Iran denies nuclear activity there. Scenario directions follow the regional wind climate for November.', 'Почему эта точка: в конце октября 2026 года Такер Карлсон заявил, что рассматривается удар США по горе Пикакс (Кух-е Колang Газ Ла, у Натанза). Официального подтверждения нет; Иран отрицает ядерную деятельность там. Направления сценариев — по климату ветров региона в ноябре.')}</div>`;
+}
 function drawOverlay(nowMs) {
   const ctx = ox; ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.clearRect(0, 0, W, H);
   const now = Date.now();
@@ -1003,6 +1089,7 @@ function drawOverlay(nowMs) {
       ctx.font = '700 9px ' + MONO; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillText('ISS', x + 14, y + 3);
     }
   }
+  if (S.nuke) drawNuke(ctx, nowMs);
   if (S.sel && S.sel.type === 'flight') drawRoute(ctx, S.sel.i);
   drawReticle(ctx, nowMs);
   if (hold && !hold.fired && pointers.size === 1 && moved < 6) {
@@ -1308,6 +1395,9 @@ function renderSheet() {
       const t = encodeURIComponent('Feedback: ' + text.slice(0, 60)), b = encodeURIComponent(text + '\n\n— ' + (who || 'anonymous') + '\n' + ctx);
       open(`https://github.com/ArmaniMachinena/worldnow-web/issues/new?title=${t}&body=${b}`, '_blank', 'noopener');
     };
+  } else if (s.type === 'nuke') {
+    $('shKick').textContent = 'TEST NUCLEAR · experimental'; $('shTitle').textContent = (window.WN_LANG === 'ru' || window.WN_LANG === 'kk') ? 'Куда понесёт осадки' : 'Where fallout would drift'; $('shCo').textContent = '33.68° N · 51.94° E';
+    body.innerHTML = nukeHTML(); nkLoadWind();
   } else if (s.type === 'risk') {
     const c = C[s.cc];
     $('shKick').textContent = 'Country risk'; $('shTitle').textContent = `${c.flag} ${c.n}`; $('shCo').textContent = '';
@@ -1534,6 +1624,7 @@ $('bIss').onclick = () => { if (S.issNow) flyTo(S.issNow.ll, 1.4, () => openSel(
 $('bSpin').onclick = () => { S.spin = !S.spin; $('bSpin').classList.toggle('on', S.spin); };
 $('ticker').onclick = () => openSel({type: 'rates'});
 $('bSOS').onclick = () => { if (S.sel && S.sel.type === 'sos') closeSheet(); else openSel({type: 'sos'}); };
+$('bNuke').onclick = () => { S.nuke = !S.nuke; $('bNuke').classList.toggle('on', S.nuke); if (S.nuke) { flyTo([56, 31], W < 700 ? 3.4 : 2.6, () => {}); openSel({type: 'nuke'}); nkLoadWind(); } else if (S.sel && S.sel.type === 'nuke') closeSheet(); S.baseDirty = true; };
 $('bFeedback').onclick = () => { if (S.sel && S.sel.type === 'feedback') closeSheet(); else openSel({type: 'feedback'}); };
 $('bRadar').onclick = () => { if (S.sel && S.sel.type === 'radar') closeSheet(); else openSel({type: 'radar'}); };
 document.addEventListener('click', e => { const b = e.target.closest('#watchBtn'); if (!b) return; const cc = b.dataset.cc, w = (S.watchMem || watchList()).slice(); const i = w.indexOf(cc); if (i >= 0) w.splice(i, 1); else w.push(cc); setWatch(w); renderSheet(); renderRadar(); });
