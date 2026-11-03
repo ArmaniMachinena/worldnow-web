@@ -331,29 +331,69 @@ def fires(p):
     p['firesSrc'] = 'VIIRS NOAA-20' if key else 'MODIS'
 
 
-INCIDENT_Q = '(explosion OR explosions OR airstrike OR "air strike" OR "drone attack" OR "missile strike" OR shelling OR "tanker fire" OR "ship attacked" OR "vessel attacked" OR "fire aboard")'
+GDELT_ROOTS = {'18': 'assault', '19': 'fight', '20': 'mass violence'}
+
+
+def _slug_title(u):
+    path = urllib.parse.urlparse(u).path.rstrip('/').split('/')
+    seg = max(path, key=len) if path else ''
+    seg = re.sub(r'\.(html?|php|aspx?)$', '', seg)
+    seg = re.sub(r'[-_]+', ' ', seg)
+    seg = re.sub(r'\b\d{5,}\b', '', seg).strip()
+    return seg[:1].upper() + seg[1:] if len(seg) > 12 else ''
 
 
 def incidents(p):
-    out = []
-    try:
-        url = ('https://api.gdeltproject.org/api/v2/geo/geo?query=' + urllib.parse.quote(INCIDENT_Q + ' sourcelang:english')
-               + '&mode=PointData&format=GeoJSON&timespan=24h&maxpoints=300')
-        d = jget(url, timeout=60)
-        for f in d.get('features') or []:
-            g, q = f.get('geometry') or {}, f.get('properties') or {}
-            c = g.get('coordinates') or []
-            if len(c) < 2:
+    """Geolocated violent events (CAMEO 18-20: assaults, fights, mass violence) from the GDELT 2.0 event export,
+    every 15-minute file since the last run, kept for 24 h and grouped by place."""
+    import zipfile
+    raw = load('incidents_hist.json')
+    events, last = raw.get('events', []), raw.get('last', '')
+    now = datetime.now(timezone.utc)
+    t = now - timedelta(minutes=now.minute % 15 + 15, seconds=now.second, microseconds=now.microsecond)
+    stamps = []
+    for k in range(8):
+        st = (t - timedelta(minutes=15 * k)).strftime('%Y%m%d%H%M%S')
+        if st <= last:
+            break
+        stamps.append(st)
+    got = 0
+    for st in reversed(stamps):
+        try:
+            b = get(f'http://data.gdeltproject.org/gdeltv2/{st}.export.CSV.zip', raw=True, timeout=40)
+        except Exception as e:
+            log(f'     gdelt {st}: {type(e).__name__}'); continue
+        z = zipfile.ZipFile(io.BytesIO(b))
+        for line in z.read(z.namelist()[0]).decode('utf-8', 'replace').splitlines():
+            c = line.split('\t')
+            if len(c) < 61 or c[28] not in GDELT_ROOTS or not c[56] or not c[57]:
                 continue
-            arts = re.findall(r'<a href="([^"]+)"[^>]*title="([^"]*)"', q.get('html') or '')
-            out.append([round(c[1], 3), round(c[0], 3), q.get('name') or '', int(q.get('count') or len(arts) or 1),
-                        [[t, u] for u, t in arts[:4]]])
-    except Exception as e:
-        log(f'     incidents geo: {type(e).__name__}: {str(e)[:120]}')
-    if not out:
+            try:
+                events.append([int(datetime.strptime(c[59], '%Y%m%d%H%M%S').replace(tzinfo=timezone.utc).timestamp()),
+                               round(float(c[56]), 2), round(float(c[57]), 2), c[52][:80], c[28], int(c[32] or 1), c[60]])
+            except Exception:
+                continue
+        last = max(last, st); got += 1
+    cut = NOW - 24 * 3600
+    events = [e for e in events if e[0] > cut]
+    save('incidents_hist.json', {'events': events, 'last': last})
+    groups = {}
+    for e in events:
+        k = (round(e[1], 1), round(e[2], 1))
+        g = groups.setdefault(k, {'lat': e[1], 'lon': e[2], 'place': e[3], 'n': 0, 'src': 0, 'urls': [], 't': 0, 'codes': set()})
+        g['n'] += 1; g['src'] += e[5]; g['t'] = max(g['t'], e[0]); g['codes'].add(e[4])
+        if e[6] not in g['urls'] and len(g['urls']) < 4:
+            g['urls'].append(e[6])
+    out = []
+    for g in groups.values():
+        if g['src'] < 3:
+            continue
+        out.append([g['lat'], g['lon'], g['place'], g['n'], [[_slug_title(u), u] for u in g['urls']], g['t'], g['src'], sorted(g['codes'])])
+    out.sort(key=lambda x: -x[6])
+    log(f'     incidents: {got} files, {len(events)} events, {len(out)} places')
+    if not out and not events:
         raise RuntimeError('no incidents')
-    out.sort(key=lambda x: -x[3])
-    p['incidents'] = out[:250]
+    p['incidents'] = out[:300]
 
 
 def kznews(p):
