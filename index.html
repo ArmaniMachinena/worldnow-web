@@ -622,6 +622,13 @@ const topRows = list => list.map((x, i) => `<a class="trow" href="${esc(x.n.u)}"
 const sourcesHTML = () => `<div class="kick sec">Top 10 official sources to collect from</div><div class="srcs">${OFF.sources.map((s, i) => `<a class="srow" href="${esc(s.url)}" target="_blank" rel="noopener"><span class="tn">${i + 1}</span><span class="tb"><b>${esc(s.name)}</b><small>${esc(s.what)}</small></span></a>`).join('')}</div>`;
 const newsRows = list => list.map(n => `<a class="nrow" href="${esc(n.u)}" target="_blank" rel="noopener"><span class="nmeta"><b>${esc(n.s)}</b>${n.ts ? ' · ' + newsAgo(n.ts) : ''}</span><span class="nt">${esc(n.t)}</span></a>`).join('');
 const cams = D.webcams.map((c, i) => ({...c, id: 'w' + i, ll: [c.lon, c.lat]}));
+/* World cameras: ~46,000 public traffic and city cameras (index via OSIRIS, open source). [lat, lng, name, city, country, feed, stream, type, external, source] */
+let WCAM = [], wcamVec = new Float32Array(0);
+function setWorldCams(list) { WCAM = list.filter(c => (c[5] || c[6]) && Math.abs(c[0]) <= 90); wcamVec = new Float32Array(WCAM.length * 3);
+  WCAM.forEach((c, i) => { const v = unitVec(c[1], c[0]); wcamVec[i * 3] = v[0]; wcamVec[i * 3 + 1] = v[1]; wcamVec[i * 3 + 2] = v[2]; });
+  S.baseDirty = true; try { renderQuick(); renderLayers(); updateStats(); } catch (e) {} }
+fetch('https://raw.githubusercontent.com/ArmaniMachinena/worldnow-web/data/cams.json?d=' + new Date().toISOString().slice(0, 10))
+  .then(r => r.ok ? r.json() : null).then(d => { if (d && d.cams) setWorldCams(d.cams); }).catch(() => {});
 
 // Flights: [lat, lon, track, alt, vel, callsign, country, icao24]
 const FN = D.flights.length;
@@ -866,6 +873,10 @@ function drawBase() {
     ctx2.fillStyle = 'rgba(238,85,69,.95)'; ctx2.fill();
   }
   }
+  if (S.layers.cams && WCAM.length) { const cs = S.zoom >= 4 ? 5 : S.zoom >= 2.2 ? 3.2 : 2;
+    bx.beginPath(); for (let i = 0; i < WCAM.length; i++) { const p = PV(wcamVec[i * 3], wcamVec[i * 3 + 1], wcamVec[i * 3 + 2], 1); if (p) bx.rect(p[0] - cs / 2, p[1] - cs / 2, cs, cs); }
+    bx.fillStyle = 'rgba(255,92,205,.85)'; bx.fill();
+    if (S.zoom >= 4) { bx.strokeStyle = 'rgba(0,0,0,.6)'; bx.lineWidth = .8; bx.stroke(); } }
   if (S.layers.labels) drawLabels(ctx);
   S.baseDirty = false;
   if (lo) { clearTimeout(hiResTimer); hiResTimer = setTimeout(() => { if (!S.moving) S.baseDirty = true; }, 140); }
@@ -1137,6 +1148,7 @@ function selScreen() {
     case 'quake': p = P(s.q.ll[0], s.q.ll[1]); break;
     case 'event': p = P(s.e.ll[0], s.e.ll[1]); break;
     case 'cam': p = P(s.c.ll[0], s.c.ll[1]); break;
+    case 'wcam': if (WCAM[s.i]) p = P(WCAM[s.i][1], WCAM[s.i][0]); break;
     case 'ship': p = P(s.s.lon, s.s.lat); break;
     case 'risk': p = P(C[s.cc].ll[1], C[s.cc].ll[0]); break;
     case 'iwm': if (s.cc) p = P(C[s.cc].ll[1], C[s.cc].ll[0]); break;
@@ -1226,6 +1238,7 @@ function handleTap(x, y) {
   if (S.layers.ships) for (const s of SHIPS) { const p = P(s.lon, s.lat); if (p) near(p[0], p[1], {type: 'ship', s}, 12, 1.1); }
   if (S.layers.threats) { for (const s of SALVOS) { const p = P(s.lon, s.lat); if (p) near(p[0], p[1], {type: 'salvo', s}, 16, 1.3); } for (const k in ORIG) { const o = ORIG[k], p = P(o[0], o[1]); if (p && SALVOS.some(s => s.origin === k)) near(p[0], p[1], {type: 'origin', k}, 16, 1.3); } }
   if (S.layers.cams) for (const c of cams) { const p = P(c.ll[0], c.ll[1]); if (p) near(p[0], p[1], {type: 'cam', c}, 16, 1.3); }
+  if (S.layers.cams) for (let i = 0; i < WCAM.length; i++) { const p = PV(wcamVec[i * 3], wcamVec[i * 3 + 1], wcamVec[i * 3 + 2], 1); if (p) near(p[0], p[1], {type: 'wcam', i}, 10, .9); }
   if (S.layers.events) for (const e of events) { const p = P(e.ll[0], e.ll[1]); if (p) near(p[0], p[1], {type: 'event', e}, 15, 1.2); }
   if (S.layers.quakes) for (const q of quakes()) { const p = P(q.ll[0], q.ll[1]); if (p) near(p[0], p[1], {type: 'quake', q}, 14, 1); }
   if (S.layers.fires) for (let i = 0; i < FIN; i++) { const p = PV(fireVec[i * 3], fireVec[i * 3 + 1], fireVec[i * 3 + 2], 1); if (p) near(p[0], p[1], {type: 'fire', i}, 8, .6); }
@@ -1278,7 +1291,7 @@ const lookBtn = (label = 'Weather and country here') => `<button class="cta" id=
 function openSel(sel) {
   if (sel.type === 'flight') { const rt = routeOf(sel.i); if (rt && rt.totalKm > 300) { const mid = d3.geoInterpolate(rt.from.ll, rt.to.ll)(.5), z = Math.max(.9, Math.min(4, 5200 / rt.totalKm)); if (S.zoom > z * 1.25 || S.zoom < z / 2.2) flyTo(mid, z); } }
   S.sel = sel; $('sheet').hidden = false; setTimeout(renderQuick, 0); $('hint').hidden = true; closePops(); renderSheet(); S.baseDirty = true; }
-function closeSheet() { $('sheet').hidden = true; S.sel = null; S.pin = null; S.baseDirty = true; renderQuick(); }
+function closeSheet() { clearInterval(S.camTimer); if (S.hls) { try { S.hls.destroy(); } catch (e) {} S.hls = null; } $('sheet').hidden = true; S.sel = null; S.pin = null; S.baseDirty = true; renderQuick(); }
 $('shClose').onclick = closeSheet;
 $('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.tab = b.dataset.t; renderSheet(); });
 
@@ -1422,6 +1435,36 @@ function renderSheet() {
       + (sv ? `<div class="kick sec">This salvo</div>` + row('Threat', TS.threat[sv.threat] || '—') + row('Estimated origin', sv.origin ? ORIG[sv.origin][3] : sv.threat === 2 ? 'Ground infiltration alert, no launch' : 'Not attributed') + row('Attribution', sv.viaUF ? 'Under Fire dataset (estimate from geography and timing)' : sv.origin ? 'Rule of thumb: north → Lebanon, south-west → Gaza' : '—') + `<div class="note" style="margin-top:6px">Places: ${esc(top)}</div>` : '')
       + `<div class="kick sec">Sirens by estimated origin, since ${fmtDT(SALVOS.length ? SALVOS[0].t : 0).split(',')[0]}</div>` + Object.entries(sm.byO).sort((a, b) => b[1] - a[1]).map(([k, n]) => row(ORIG[k] ? ORIG[k][3] : k, String(n))).join('')
       + `<div class="note">Dots are places where sirens sounded (red: rockets and missiles, purple: drones, yellow: infiltration). Dashed arcs connect each salvo to an <b>estimated</b> launch region — they are not measured trajectories, and a siren is a warning to a place, not a count of projectiles. Sources: Tzofar (tzevaadom.co.il) relay of Israel's Home Front Command alerts; origin estimates by Under Fire (under-fire.org, CC attribution, non-commercial use). In the app the sirens refresh live.</div>`;
+  } else if (s.type === 'wcam') {
+    clearInterval(S.camTimer); if (S.hls) { try { S.hls.destroy(); } catch (e) {} S.hls = null; }
+    const c = WCAM[s.i]; if (!c) { closeSheet(); return; }
+    const [lat, lng, name, city, country, feed, stream, type0, ext, src] = c;
+    const url = stream || feed, type = type0 || (/\.m3u8/i.test(url) ? 'hls' : /\.mp4/i.test(url) ? 'mp4' : /youtube\.com\/embed|\/embed\//i.test(url) ? 'iframe' : 'jpg');
+    $('shKick').textContent = 'Camera · ' + src; $('shTitle').textContent = name || 'Camera'; $('shCo').textContent = [city, country].filter(Boolean).join(', ') + ' · ' + coordStr([lng, lat]);
+    const insecure = /^http:/i.test(url) && location.protocol === 'https:';
+    const box = 'width:100%;aspect-ratio:16/9;background:#000;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin:4px 0 10px';
+    let view = '';
+    if (insecure) view = `<div style="${box};color:var(--dim);font-size:13px;text-align:center;padding:12px">This camera only serves an unencrypted feed, so it opens in a new tab.</div>`;
+    else if (type === 'iframe') view = `<div style="${box}"><iframe src="${esc(url)}" style="width:100%;height:100%;border:0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="no-referrer"></iframe></div>`;
+    else if (type === 'hls' || type === 'mp4') view = `<div style="${box}"><video id="camVideo" muted autoplay playsinline controls style="width:100%;height:100%;object-fit:contain"></video></div>`;
+    else view = `<div style="${box}"><img id="camImg" alt="" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:contain"></div>`;
+    body.innerHTML = view + `<div id="camMsg" class="note" style="margin-top:0"></div>`
+      + row('Source', src) + (country ? row('Country', country) : '')
+      + `<a class="cta" style="display:block;text-decoration:none" href="${esc(ext || url)}" target="_blank" rel="noopener">Open on the provider's site ↗</a>`
+      + `<div class="note">Public cameras published by road authorities, cities and webcam owners; snapshots refresh every few seconds to minutes, streams play live when the owner allows embedding. Camera index: OSIRIS (osirisai.live, open source, MIT).</div>`;
+    const msg = t => { const m = $('camMsg'); if (m) m.textContent = t; };
+    if (!insecure && (type === 'jpg' || type === 'mjpeg' || type === '')) {
+      const img = $('camImg'), load = () => { if (!$('camImg')) { clearInterval(S.camTimer); return; } img.src = type === 'mjpeg' ? url : url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now(); };
+      img.onerror = () => msg('The camera did not return an image right now. Try the provider\'s site.'); img.onload = () => msg('');
+      clearInterval(S.camTimer); load(); if (type !== 'mjpeg') S.camTimer = setInterval(load, 15000);
+    } else if (!insecure && type === 'mp4') { $('camVideo').src = url; $('camVideo').onerror = () => msg('The video could not be played here. Try the provider\'s site.'); }
+    else if (!insecure && type === 'hls') {
+      const v = $('camVideo');
+      if (v.canPlayType('application/vnd.apple.mpegurl')) { v.src = url; }
+      else { msg('Loading the player…'); const go = () => { if (!window.Hls || !Hls.isSupported()) { msg('This browser cannot play the stream. Try the provider\'s site.'); return; }
+          const h = new Hls(); S.hls = h; h.loadSource(url); h.attachMedia(v); h.on(Hls.Events.MANIFEST_PARSED, () => { msg(''); v.play().catch(() => {}); }); h.on(Hls.Events.ERROR, (e, d) => { if (d.fatal) msg('The stream is not available for embedding right now. Try the provider\'s site.'); }); };
+        if (window.Hls) go(); else { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.13/hls.min.js'; sc.onload = go; sc.onerror = () => msg('The player could not be loaded. Try the provider\'s site.'); document.head.appendChild(sc); } }
+    }
   } else if (s.type === 'cam') {
     const c = s.c;
     $('shKick').textContent = 'Public webcam · ' + c.src; $('shTitle').textContent = c.name; $('shCo').textContent = coordStr(c.ll) + ' (approximate)';
@@ -1560,7 +1603,7 @@ const QI = {
   news: '<path d="M4 5h13v14H6a2 2 0 0 1-2-2V5Zm13 4h3v8a2 2 0 0 1-2 2M7 9h7M7 12.5h7M7 16h4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>',
   rates: '<text x="12" y="17.5" text-anchor="middle" font-size="16" font-weight="700" fill="currentColor" font-family="system-ui">₸</text>'
 };
-const QUICK = [['flights', 'Aircraft', () => FN], ['sats', 'Satellites', () => SN], ['quakes', 'Earthquakes', () => quakes().length], ['fires', 'Fires', () => FIN], ['events', 'Hazards', () => events.length], ['ships', 'Ships', () => SHIPS.length], ['iwm', 'Iran War Monitor', null], ['threats', 'Threats', () => TS.alerts.length], ['risk', 'Country risks', () => Object.keys(RISK.adv).length], ['cams', 'Webcams', () => cams.length], ['iss', 'ISS', null], ['news', 'News', () => NEWS.length], '-', ['labels', 'Labels', null], ['night', 'Night', null], ['rates', 'Rates', null]];
+const QUICK = [['flights', 'Aircraft', () => FN], ['sats', 'Satellites', () => SN], ['quakes', 'Earthquakes', () => quakes().length], ['fires', 'Fires', () => FIN], ['events', 'Hazards', () => events.length], ['ships', 'Ships', () => SHIPS.length], ['iwm', 'Iran War Monitor', null], ['threats', 'Threats', () => TS.alerts.length], ['risk', 'Country risks', () => Object.keys(RISK.adv).length], ['cams', 'Webcams', () => cams.length + WCAM.length], ['iss', 'ISS', null], ['news', 'News', () => NEWS.length], '-', ['labels', 'Labels', null], ['night', 'Night', null], ['rates', 'Rates', null]];
 const shortN = n => n >= 1000 ? nf(n / 1000, n >= 10000 ? 0 : 1) + 'k' : String(n);
 function renderQuick() {
   const isOn = k => k === 'news' || k === 'sos' ? !!(S.sel && S.sel.type === k) : S.layers[k];
@@ -1585,7 +1628,7 @@ const LAYERS = [
   ['iwm', 'Iran War Monitor layer', 'Own threat index, situation assessment, clocks · sub-layers in its panel', null, '◎'],
   ['risk', 'Country risks', 'Travel advisory levels, WHO outbreaks, internet outages', () => Object.keys(RISK.adv).length, '☣'],
   ['threats', 'Threats: sirens in Israel', 'Home Front Command alerts · estimated launch areas', () => TS.alerts.length, '⚠'],
-  ['cams', 'Public webcams', 'live views open on the provider site', () => cams.length, '▶'],
+  ['cams', 'Public webcams', 'Traffic and city cameras worldwide · tap one to watch', () => cams.length + WCAM.length, '▶'],
   ['iss', 'ISS and its ground track', 'computed live', null, '▣'],
   ['night', 'Night and twilight', 'day/night line, now', null, '◐']
 ];
@@ -1641,7 +1684,7 @@ function flyTo(ll, zoom, done) {
 
 /* ---------- header / ticker ---------- */
 function updateStats() {
-  let n = (S.layers.ships ? SHIPS.length : 0) + (S.layers.threats ? TS.alerts.length : 0) + (S.layers.fires ? FIN : 0) + (S.layers.quakes ? quakes().length : 0) + (S.layers.events ? events.length : 0) + (S.layers.flights ? FN : 0) + (S.layers.cams ? cams.length : 0) + (S.layers.iss && S.issNow ? 1 : 0);
+  let n = (S.layers.ships ? SHIPS.length : 0) + (S.layers.threats ? TS.alerts.length : 0) + (S.layers.fires ? FIN : 0) + (S.layers.quakes ? quakes().length : 0) + (S.layers.events ? events.length : 0) + (S.layers.flights ? FN : 0) + (S.layers.cams ? cams.length + WCAM.length : 0) + (S.layers.iss && S.issNow ? 1 : 0);
   if (S.layers.sats) for (const g in SG) if (S.satGroups[g]) n += satCount[g] || 0;
   $('sLayers').textContent = Object.entries(S.layers).filter(([k, v]) => v && k !== 'rates').length; $('sObj').textContent = fmtInt.format(n);
   $('sIss').textContent = S.issNow ? `${nf(Math.abs(S.issNow.ll[1]), 1)}°${S.issNow.ll[1] >= 0 ? 'N' : 'S'} ${nf(Math.abs(S.issNow.ll[0]), 1)}°${S.issNow.ll[0] >= 0 ? 'E' : 'W'}` : '—';
