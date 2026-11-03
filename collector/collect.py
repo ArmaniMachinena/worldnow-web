@@ -464,9 +464,30 @@ def rates(p):
         log(f'     nbk: {type(e).__name__}')
 
 
+# ---------------------------------------------------------------- cameras (24 h)
+def cams(p):
+    # Public camera index from OSIRIS (open source, MIT; its documented API needs no key).
+    d = jget('https://osirisai.live/api/cctv?region=all', timeout=180)
+    out = []
+    for c in d.get('cameras') or []:
+        try:
+            lat, lng = float(c['lat']), float(c['lng'])
+        except Exception:
+            continue
+        feed, stream = c.get('feed_url') or '', c.get('stream_url') or ''
+        if not feed and not stream:
+            continue
+        out.append([round(lat, 4), round(lng, 4), c.get('name') or '', c.get('city') or '', c.get('country') or '',
+                    feed, stream, c.get('stream_type') or '', c.get('external_url') or '', c.get('source') or ''])
+    if len(out) < 500:
+        raise RuntimeError(f'only {len(out)} cameras')
+    p['cams'] = out
+    p['camsSources'] = d.get('sources') or {}
+
+
 # ---------------------------------------------------------------- run
 def main():
-    fast, mid, slow, wx = load('fast.json'), load('mid.json'), load('slow.json'), load('weather.json')
+    fast, mid, slow, wx, cm = load('fast.json'), load('mid.json'), load('slow.json'), load('weather.json'), load('cams.json')
     step(fast, 'flights', 5 if os.environ.get('OPENSKY_ID') else 20, flights)
     step(fast, 'quakes', 5, quakes)
     step(fast, 'sirens', 5, sirens)
@@ -481,10 +502,11 @@ def main():
     step(slow, 'sats', 360, sats)
     step(slow, 'risk', 180, risk)
     step(slow, 'rates', 180, rates)
-    for name, part in (('fast.json', fast), ('mid.json', mid), ('slow.json', slow), ('weather.json', wx)):
+    step(cm, 'cams', 1440, cams)
+    for name, part in (('fast.json', fast), ('mid.json', mid), ('slow.json', slow), ('weather.json', wx), ('cams.json', cm)):
         part['gen'] = int(NOW)
         save(name, part)
-    save('status.json', {'gen': int(NOW), 'log': LOG, 'at': {k: v for part in (fast, mid, slow, wx) for k, v in part.get('_at', {}).items()}})
+    save('status.json', {'gen': int(NOW), 'log': LOG, 'at': {k: v for part in (fast, mid, slow, wx, cm) for k, v in part.get('_at', {}).items()}})
 
 
 if __name__ == '__main__':
