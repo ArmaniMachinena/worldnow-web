@@ -529,7 +529,7 @@ function threatIndex() {
   const comp = Math.round(th.slice(0, 3).reduce((s, x) => s + x.v, 0) / 3 * 10) / 10;
   return {list, theater: th, comp, top: st.ranked.find(s => s.hot && s.cc.some(c => THEATER.includes(c)))};
 }
-const FEEDBACK_URL = ''; // Formspree endpoint, e.g. https://formspree.io/f/xxxxxxx; empty = GitHub issue
+const FEEDBACK_URL = 'https://formspree.io/f/maeelzbw'; // Formspree endpoint, e.g. https://formspree.io/f/xxxxxxx; empty = GitHub issue
 function tiLegendHTML() {
   const bands = [['0–1.5 LOW: no notable signals.', '#4fd27a'], ['1.5–3 GUARDED: isolated signals; normal caution.', '#9fd24f'], ['3–5 ELEVATED: several signals at once; follow the news.', '#f9d64d'], ['5–7 HIGH: active danger; check your embassy\'s advice.', '#f98c33'], ['7–10 SEVERE: strikes or a crisis now; consider leaving.', '#ee5545']];
   const parts = ['Sirens in Israel (up to 4): a salvo in the last 24 h counts most, older ones less; credited to Israel and to the country it was likely launched from.', 'News (up to 3): the high-impact story about the country carried by the most of 10 key outlets, 0.6 per outlet.', 'Disasters: GDACS red alert +1, orange +0.5.', 'US travel advisory: level 2 +0.4, level 3 +0.8, level 4 +1.2.', 'Internet outages this week: +0.5.'];
