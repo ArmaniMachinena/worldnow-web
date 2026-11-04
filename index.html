@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
-<script>window.WN_BUILD="20261104093152";</script>
+<script>window.WN_BUILD="20261104094541";</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>World Now</title>
+<title>WorldNow:Emergency</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;700&family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -128,7 +128,7 @@ canvas.layer{position:absolute;inset:0;width:100%;height:100%;display:block;poin
 #legend{display:flex;flex-wrap:wrap;max-width:min(560px,calc(100vw - 32px));align-items:center;gap:5px 10px;padding:7px 10px;font-family:var(--f-mono);font-size:10.5px;color:var(--dim)}
 @media (min-width:821px){#bottom{left:240px;max-width:calc(100% - 330px)}#legend{flex-wrap:nowrap;white-space:nowrap;max-width:none;gap:0 9px}#legend .bar{width:56px}}
 @media (max-width:820px){#bottom{left:56px;max-width:calc(100% - 112px)}}
-@media (max-width:820px){#wnLogo{width:28px;height:28px}#hdr .brand{letter-spacing:.12em;white-space:nowrap}}
+@media (max-width:820px){#wnLogo{width:28px;height:28px}#hdr .brand{letter-spacing:.12em;white-space:nowrap;font-size:16px}#hdr .brand span{display:block;font-size:11px;letter-spacing:.24em;margin-top:3px}}
 #stFil{position:absolute;left:240px;bottom:62px;z-index:7;display:flex;flex-direction:column;gap:4px;padding:6px;min-width:170px}
 #stFil[hidden]{display:none}
 @media (max-width:820px){#stFil{left:56px;bottom:auto;top:118px}#stFil .qb{width:auto;height:34px;justify-content:flex-start;padding:0 10px}}
@@ -198,7 +198,7 @@ canvas.layer{position:absolute;inset:0;width:100%;height:100%;display:block;poin
 #bFlag{background:rgba(255,255,255,.06);border:1px solid var(--edge);border-radius:8px;font-size:20px;line-height:1;padding:4px 7px;cursor:pointer}
 </style>
 <div id="onb" hidden><div class="obox panel" role="dialog" aria-modal="true" aria-labelledby="onbT">
-<div class="kick" id="onbK">WORLD NOW</div>
+<div class="kick" id="onbK">WORLDNOW:EMERGENCY</div>
 <h3 id="onbT"></h3><div class="osub" id="onbS"></div>
 <input id="onbQ" type="search" autocomplete="off">
 <div id="onbList"></div>
@@ -224,7 +224,7 @@ vel=Math.max(vel,SPEED[taps]);if(!raf){prev=now;raf=requestAnimationFrame(step);
   <header id="hdr" class="panel">
     <div class="hrow">
       <div style="display:flex;align-items:center;gap:10px">
-        <svg id="wnLogo" viewBox="0 0 40 40" width="34" height="34" role="img" aria-label="World Now" style="flex:none;cursor:pointer">
+        <svg id="wnLogo" viewBox="0 0 40 40" width="34" height="34" role="img" aria-label="WorldNow:Emergency" style="flex:none;cursor:pointer">
           <defs><clipPath id="wnClip"><circle cx="20" cy="20" r="16.5"/></clipPath><radialGradient id="wnSea" cx=".38" cy=".35" r=".75"><stop offset="0" stop-color="#1d3346"/><stop offset="1" stop-color="#0a121b"/></radialGradient></defs>
           <circle cx="20" cy="20" r="16.5" fill="url(#wnSea)"/>
           <g clip-path="url(#wnClip)" fill="none" stroke="#deb045" stroke-width="1.1" opacity=".75">
@@ -235,7 +235,7 @@ vel=Math.max(vel,SPEED[taps]);if(!raf){prev=now;raf=requestAnimationFrame(step);
           <circle cx="20" cy="20" r="16.5" fill="none" stroke="#deb045" stroke-width="1.8"/>
         </svg>
         <div>
-        <div class="brand">WORLD NOW</div>
+        <div class="brand">WORLDNOW<span style="color:#ee5545">:EMERGENCY</span></div>
         <div class="sub">OPEN DATA · PREVIEW</div>
         </div>
       </div>
@@ -629,23 +629,23 @@ function threatIndex() {
 }
 const FEEDBACK_URL = 'https://formspree.io/f/maeelzbw'; // Formspree endpoint, e.g. https://formspree.io/f/xxxxxxx; empty = GitHub issue
 const ABOUT = {
-  en: {kick: 'About', title: 'About World Now', sec: ['What this is', 'Sources', 'Disclaimer', 'Other systems', 'Your opinion'],
+  en: {kick: 'About', title: 'About WorldNow:Emergency', sec: ['What this is', 'Sources', 'Disclaimer', 'Other systems', 'Your opinion'],
     who: 'A private, public-interest portal for anyone on Earth, whatever their citizenship. When you enter, you choose your country, and the portal gathers the context you actually need, in the languages spoken there.',
     what: ['This portal is built on free information published on the internet through open APIs.', 'It gathers context: official information, addresses and contacts of ministries and agencies, embassies and consulates of different countries; the situation as reported by key national news portals; transport (flights, ships, cameras); weather, earthquakes, fires and disasters.'],
     discl: ['Use this information personally, for contextual search only.', 'Do not use it to make decisions, do not sell it, and do not show it to other users.', 'Data may be incomplete, delayed or wrong. Always check official sources.'],
-    other: 'Iran War Monitor and similar services are separate systems that work on their own. World Now links to them and combines open sources to give a full contextual picture; it does not control their content.',
+    other: 'Iran War Monitor and similar services are separate systems that work on their own. WorldNow:Emergency links to them and combines open sources to give a full contextual picture; it does not control their content.',
     fb: 'If you do not like how the system works, or have an idea how to improve it, press the feedback button and send your suggestion. If it does not suit you, simply stop using it and delete it.', btn: 'Send feedback'},
-  ru: {kick: 'О портале', title: 'О World Now', sec: ['Что это', 'Источники', 'Отказ от обязательств', 'Другие системы', 'Ваше мнение'],
+  ru: {kick: 'О портале', title: 'О WorldNow:Emergency', sec: ['Что это', 'Источники', 'Отказ от обязательств', 'Другие системы', 'Ваше мнение'],
     who: 'Частный общественный портал для любого жителя Земли, независимо от гражданства. При входе вы выбираете свою страну, и портал собирает именно ту контекстную информацию, которая вам нужна, на языках, которые преобладают в этой стране.',
     what: ['Этот портал создан на свободной информации, которая публикуется в интернете через открытые API.', 'Он собирает контекст: официальную информацию, адреса и контакты министерств и ведомств, посольств и консульств разных стран; ситуацию, которую публикуют ключевые новостные порталы стран; транспорт (самолёты, суда, камеры); погоду, землетрясения, пожары и стихийные бедствия.'],
     discl: ['Используйте эту информацию лично для себя, для контекстного поиска.', 'Не для принятия решений, не для продажи и не для показа другим пользователям.', 'Данные могут быть неполными, запаздывать или содержать ошибки. Всегда сверяйтесь с официальными источниками.'],
-    other: 'Iran War Monitor и подобные сервисы — отдельные системы, которые работают автономно. World Now ссылается на них и объединяет открытые источники, чтобы сложилась полная контекстная картина; за их содержание он не отвечает.',
+    other: 'Iran War Monitor и подобные сервисы — отдельные системы, которые работают автономно. WorldNow:Emergency ссылается на них и объединяет открытые источники, чтобы сложилась полная контекстная картина; за их содержание он не отвечает.',
     fb: 'Если вам не нравится, как работает система, или вы знаете, как её улучшить, нажмите кнопку обратной связи и отправьте своё предложение. Если система вам не подходит, просто не пользуйтесь ей и удалите её.', btn: 'Оставить отзыв'},
-  kk: {kick: 'Портал туралы', title: 'World Now туралы', sec: ['Бұл не', 'Дереккөздер', 'Міндеттемеден бас тарту', 'Басқа жүйелер', 'Сіздің пікіріңіз'],
+  kk: {kick: 'Портал туралы', title: 'WorldNow:Emergency туралы', sec: ['Бұл не', 'Дереккөздер', 'Міндеттемеден бас тарту', 'Басқа жүйелер', 'Сіздің пікіріңіз'],
     who: 'Азаматтығына қарамастан, Жердің кез келген тұрғынына арналған жеке қоғамдық портал. Кірген кезде еліңізді таңдайсыз, ал портал сізге шынымен қажет контекстік ақпаратты сол елде басым тілдерде жинайды.',
     what: ['Бұл портал интернетте ашық API арқылы жарияланатын еркін ақпаратқа негізделген.', 'Ол контекст жинайды: министрліктер мен ведомстволардың, әр елдің елшіліктері мен консулдықтарының ресми ақпараты, мекенжайлары мен байланыстары; елдердің негізгі жаңалық порталдары жариялайтын жағдай; көлік (ұшақтар, кемелер, камералар); ауа райы, жер сілкінісі, өрт және табиғи апаттар.'],
     discl: ['Бұл ақпаратты тек өзіңіз үшін, контекстік іздеу үшін пайдаланыңыз.', 'Шешім қабылдау, сату немесе басқа пайдаланушыларға көрсету үшін емес.', 'Деректер толық емес, кешіккен немесе қате болуы мүмкін. Әрқашан ресми дереккөздермен тексеріңіз.'],
-    other: 'Iran War Monitor және сол сияқты сервистер — дербес жұмыс істейтін бөлек жүйелер. World Now оларға сілтеме береді және толық контекстік көрініс қалыптасу үшін ашық дереккөздерді біріктіреді; олардың мазмұнына жауап бермейді.',
+    other: 'Iran War Monitor және сол сияқты сервистер — дербес жұмыс істейтін бөлек жүйелер. WorldNow:Emergency оларға сілтеме береді және толық контекстік көрініс қалыптасу үшін ашық дереккөздерді біріктіреді; олардың мазмұнына жауап бермейді.',
     fb: 'Жүйенің жұмысы ұнамаса немесе оны жақсарту жолын білсеңіз, кері байланыс түймесін басып, ұсынысыңызды жіберіңіз. Жүйе сізге сәйкес келмесе, оны пайдаланбаңыз және жойыңыз.', btn: 'Пікір қалдыру'}
 };
 const ABOUT_SRC = ['Aircraft: OpenSky Network', 'Earthquakes: USGS', 'Fires: NASA FIRMS', 'Disasters: GDACS, NASA EONET', 'Satellites: CelesTrak', 'Weather: Open-Meteo', 'Economy: World Bank; rates: ExchangeRate-API, National Bank of Kazakhstan', 'Country risks: US State Department, WHO, IODA (Georgia Tech)', 'Sirens: Tzofar / Home Front Command; launch estimates: Under Fire', 'News: national agencies, BBC, Reuters, AP and other key outlets', 'Embassies: MFA of Kazakhstan (gov.kz); other countries: Wikidata via database-of-embassies', 'Cameras: road authorities and public webcams, index via OSIRIS (open source)', 'Maps: Natural Earth, OpenStreetMap, CARTO'];
@@ -1790,7 +1790,7 @@ function renderSheet() {
     const d = s.d && TH.dossiers.find(x => x.id === s.d);
     if (!d) {
       S.thrPts = null;
-      $('shKick').textContent = 'World Now · ' + (TH.generated || ''); $('shTitle').textContent = wnTr('Main world threats'); $('shCo').textContent = '';
+      $('shKick').textContent = 'WorldNow:Emergency · ' + (TH.generated || ''); $('shTitle').textContent = wnTr('Main world threats'); $('shCo').textContent = '';
       const ORD = {active: 0, easing: 1, over: 2};
       body.innerHTML = TH.dossiers.slice().sort((a, b) => (ORD[a.status] ?? 0) - (ORD[b.status] ?? 0)).map(x => `<div data-th="${esc(x.id)}" style="cursor:pointer;border:1px solid var(--edge);border-left:3px solid ${(SC[x.status] || SC.active)[0]};border-radius:8px;padding:10px 12px;margin:10px 0">
           <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:15px;line-height:1.3">${esc(tx(x.title))}</b>${badge(x.status)}</div>
