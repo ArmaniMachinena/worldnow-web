@@ -161,6 +161,10 @@ def flights(p):
     h = {'Authorization': 'Bearer ' + tok} if tok else {}
     d = jget('https://opensky-network.org/api/states/all', headers=h, timeout=60)
     out = []
+    try:
+        ap_activity(d.get('states') or [], d.get('time') or int(NOW))
+    except Exception as e:
+        log(f'     airports activity: {type(e).__name__}: {e}')
     for s in d.get('states') or []:
         lon, lat = s[5], s[6]
         if lat is None or lon is None or s[8]:
@@ -599,6 +603,225 @@ def rates(p):
         log(f'     nbk: {type(e).__name__}')
 
 
+
+# ---------------------------------------------------------------- airports and sea ports
+# Places (daily): OurAirports (public domain) large airports + medium ones with scheduled service;
+# NGA World Port Index (US public domain) large and medium harbours; airline names and contacts from
+# OpenFlights (ODbL) and Wikidata (CC0).
+def places(p):
+    rows = list(csv.DictReader(io.StringIO(get('https://raw.githubusercontent.com/davidmegginson/ourairports-data/main/airports.csv', timeout=90))))
+    ap = []
+    for r in rows:
+        big = r['type'] == 'large_airport'
+        if not (big or (r['type'] == 'medium_airport' and r['scheduled_service'] == 'yes' and r['iata_code'])):
+            continue
+        try:
+            ap.append([r['iata_code'], r['icao_code'] or r['ident'], r['name'], r['municipality'], r['iso_country'],
+                       round(float(r['latitude_deg']), 4), round(float(r['longitude_deg']), 4), 'L' if big else 'M',
+                       r['home_link'], r['wikipedia_link']])
+        except Exception:
+            continue
+    if len(ap) < 2000:
+        raise RuntimeError(f'only {len(ap)} airports')
+    p['airports'] = ap
+    # sea ports
+    try:
+        txt = get('https://msi.nga.mil/api/publications/download?type=view&key=16920959/SFH00000/UpdatedPub150.csv', timeout=90)
+        pr = []
+        for r in csv.DictReader(io.StringIO(txt.lstrip('\ufeff'))):
+            size = (r.get('Harbor Size') or '').strip()
+            if size not in ('Large', 'Medium'):
+                continue
+            try:
+                pr.append([r.get('Main Port Name', '').strip(), (r.get('UN/LOCODE') or '').replace(' ', ''), r.get('Country Code', '').strip(),
+                           round(float(r['Latitude']), 4), round(float(r['Longitude']), 4), size[0], (r.get('Harbor Type') or '').strip()])
+            except Exception:
+                continue
+        if len(pr) > 200:
+            p['ports'] = pr
+        log(f'     ports: {len(pr)}')
+    except Exception as e:
+        log(f'     ports: {type(e).__name__}: {str(e)[:120]}')
+    # airlines: ICAO code -> [name, IATA, callsign, country, web, phone, email]
+    al = {}
+    for r in csv.reader(io.StringIO(get('https://raw.githubusercontent.com/jpatokal/openflights/master/data/airlines.dat'))):
+        if len(r) >= 8 and r[7] == 'Y' and re.fullmatch(r'[A-Z]{3}', r[4] or ''):
+            al[r[4]] = [r[1], r[3] if r[3] not in ('\\N', '-') else '', r[5] if r[5] != '\\N' else '', r[6], '', '', '']
+    try:
+        q = ('SELECT ?icao ?name ?web ?phone ?mail WHERE { ?a wdt:P230 ?icao . OPTIONAL { ?a wdt:P856 ?web } '
+             'OPTIONAL { ?a wdt:P1329 ?phone } OPTIONAL { ?a wdt:P968 ?mail } '
+             'OPTIONAL { ?a rdfs:label ?name FILTER(lang(?name) = "en") } FILTER NOT EXISTS { ?a wdt:P576 ?end } }')
+        d = jget('https://query.wikidata.org/sparql?format=json&query=' + urllib.parse.quote(q), timeout=120,
+                 headers={'Accept': 'application/sparql-results+json'})
+        n = 0
+        for b in d['results']['bindings']:
+            c = b['icao']['value'].strip().upper()
+            if not re.fullmatch(r'[A-Z]{3}', c):
+                continue
+            row = al.setdefault(c, [b.get('name', {}).get('value', c), '', '', '', '', '', ''])
+            if not row[4] and 'web' in b: row[4] = b['web']['value']; n += 1
+            if not row[5] and 'phone' in b: row[5] = b['phone']['value']
+            if not row[6] and 'mail' in b: row[6] = b['mail']['value'].replace('mailto:', '')
+        log(f'     airlines: {len(al)}, {n} with a website (Wikidata)')
+    except Exception as e:
+        log(f'     airlines wikidata: {type(e).__name__}: {str(e)[:120]}')
+    p['airlines'] = al
+
+
+_AP = None
+
+
+def AP():
+    """Airports as (code, lat, lon) plus a 1-degree grid for quick lookups."""
+    global _AP
+    if _AP is None:
+        ap = load('places.json').get('airports') or []
+        grid = {}
+        for a in ap:
+            grid.setdefault((int(a[5] // 1), int(a[6] // 1)), []).append(a)
+        _AP = (ap, grid)
+    return _AP
+
+
+def ap_near(grid, lat, lon, km=20):
+    best, bd = None, km
+    ci, cj = int(lat // 1), int(lon // 1)
+    for i in (ci - 1, ci, ci + 1):
+        for j in (cj - 1, cj, cj + 1):
+            for a in grid.get((i, j), ()):
+                dy = (lat - a[5]) * 111.2; dx = (lon - a[6]) * 111.2 * max(0.05, abs(__import__('math').cos(lat * 0.01745)))
+                d = (dx * dx + dy * dy) ** .5
+                if d < bd:
+                    best, bd = a, d
+    return best
+
+
+def ap_activity(states, t):
+    """Aircraft on the ground or below 2.5 km within 20 km of an airport, per snapshot; airline codes from callsigns."""
+    ap, grid = AP()
+    if not ap:
+        return
+    cnt, air = {}, {}
+    for s in states:
+        lon, lat = s[5], s[6]
+        if lat is None or lon is None:
+            continue
+        alt = s[7] if s[7] is not None else s[13]
+        if not s[8] and (alt is None or alt > 2500):
+            continue
+        a = ap_near(grid, lat, lon)
+        if not a:
+            continue
+        k = a[1]; cnt[k] = cnt.get(k, 0) + 1
+        cs = (s[1] or '').strip()
+        if re.fullmatch(r'[A-Z]{3}\d[0-9A-Z]*', cs):
+            air.setdefault(k, set()).add(cs[:3])
+    h = load('aphist.json')
+    hour = str(int(t // 3600))
+    snaps = h.get('snaps', {}); snaps[hour] = snaps.get(hour, 0) + 1
+    counts = h.get('counts', {})
+    for k, n in cnt.items():
+        counts.setdefault(k, {})
+        counts[k][hour] = counts[k].get(hour, 0) + n
+    keep = int(t // 3600) - 7 * 24
+    snaps = {x: v for x, v in snaps.items() if int(x) >= keep}
+    counts = {k: {x: v for x, v in c.items() if int(x) >= keep} for k, c in counts.items()}
+    airl = h.get('air', {})
+    day = str(int(t // 86400))
+    for k, codes in air.items():
+        airl.setdefault(k, {})
+        for c in codes:
+            airl[k][c] = day
+    kd = int(t // 86400) - 7
+    airl = {k: {c: d for c, d in v.items() if int(d) >= kd} for k, v in airl.items()}
+    save('aphist.json', {'snaps': snaps, 'counts': {k: c for k, c in counts.items() if c}, 'air': {k: v for k, v in airl.items() if v}})
+
+
+def apstat(p):
+    """Traffic light per airport: G = traffic as usual, Y = much less than usual or a hazard/incident/FAA delay nearby,
+    R = usually busy but no aircraft seen for 2+ hours, or closed by the FAA. No light when ADS-B coverage is too thin."""
+    import math
+    ap, grid = AP()
+    h = load('aphist.json')
+    snaps, counts = h.get('snaps', {}), h.get('counts', {})
+    if not ap or not snaps:
+        raise RuntimeError('no airport history yet')
+    nowh = int(NOW // 3600)
+    def avg(c, hours):
+        n = sum(snaps.get(str(x), 0) for x in hours)
+        return (sum(c.get(str(x), 0) for x in hours) / n) if n else None
+    recent_h = [nowh, nowh - 1]
+    base_h = [x for x in range(nowh - 7 * 24, nowh - 2)]
+    same_h = [nowh - 24 * d + o for d in range(1, 8) for o in (-1, 0, 1)]
+    # hazards near airports: incidents (24 h), big quakes, GDACS orange/red
+    mid, fast = load('mid.json'), load('fast.json')
+    haz = []
+    for x in mid.get('incidents') or []:
+        haz.append((x[0], x[1], 40, 'incident'))
+    for q in fast.get('quakes') or []:
+        if (q.get('m') or 0) >= 5.5 and NOW * 1000 - (q.get('t') or 0) < 48 * 3600e3:
+            haz.append((q['x'][1], q['x'][0], 150, 'quake'))
+    for g in mid.get('gdacs') or []:
+        try:
+            if str(g.get('lvl') or '').lower() in ('orange', 'red') and g.get('lat') is not None:
+                haz.append((g['lat'], g['lon'], 150, 'disaster'))
+        except Exception:
+            pass
+    faa = p.get('faaRaw') or {}
+    out = {}
+    for a in ap:
+        k = a[1]; c = counts.get(k, {})
+        rec, base, same = avg(c, recent_h), avg(c, base_h), avg(c, same_h)
+        ref = same if same is not None and sum(snaps.get(str(x), 0) for x in same_h) >= 6 else base
+        why = []
+        st = ''
+        if ref is not None and ref >= 1.0 and rec is not None:
+            if rec == 0 and ref >= 2:
+                st = 'R'; why.append('quiet')
+            elif rec < ref * 0.35:
+                st = 'Y'; why.append('low')
+            else:
+                st = 'G'
+        for la, lo, km, kind in haz:
+            if abs(la - a[5]) < 2 and abs(lo - a[6]) < 2:
+                d = 6371 * math.acos(min(1, math.sin(math.radians(la)) * math.sin(math.radians(a[5])) +
+                                          math.cos(math.radians(la)) * math.cos(math.radians(a[5])) * math.cos(math.radians(lo - a[6]))))
+                if d <= km and kind not in why:
+                    why.append(kind)
+                    if st in ('', 'G'):
+                        st = 'Y'
+        f = faa.get(a[0])
+        if f:
+            why.append('faa:' + f[1][:80])
+            st = 'R' if f[0] == 'closed' else ('Y' if st != 'R' else st)
+        if st or why:
+            out[k] = [st, round(rec, 1) if rec is not None else None, round(ref, 1) if ref is not None else None, why]
+    airl = h.get('air', {})
+    p['apstat'] = out
+    p['apair'] = {k: sorted(v)[:24] for k, v in airl.items()}
+
+
+def faa(p):
+    """US airport delays and closures from the FAA NAS status feed."""
+    x = ET.fromstring(get('https://nasstatus.faa.gov/api/airport-status-information', timeout=30))
+    res = {}
+    for e in x.iter():
+        tag = e.tag.split('}')[-1]
+        if tag in ('Ground_Delay', 'Ground_Stop', 'Delay', 'Airport', 'Program'):
+            arpt = (e.findtext('ARPT') or e.findtext('ARPT_ID') or '').strip()
+            if not arpt:
+                continue
+            reason = (e.findtext('Reason') or e.findtext('REASON') or '').strip()
+            res[arpt] = ['delay', f'{tag.replace("_", " ")}: {reason}'.strip(': ')]
+    for e in x.iter():
+        if e.tag.split('}')[-1] == 'Airport_Closure_List':
+            for a in e:
+                arpt = (a.findtext('ARPT') or '').strip()
+                if arpt:
+                    res[arpt] = ['closed', 'Closed: ' + (a.findtext('Reason') or '').strip()]
+    p['faaRaw'] = res
+
+
 # ---------------------------------------------------------------- cameras (24 h)
 def cams(p):
     # Public camera index from OSIRIS (open source, MIT; its documented API needs no key).
@@ -622,7 +845,10 @@ def cams(p):
 
 # ---------------------------------------------------------------- run
 def main():
-    fast, mid, slow, wx, cm = load('fast.json'), load('mid.json'), load('slow.json'), load('weather.json'), load('cams.json')
+    fast, mid, slow, wx, cm, pl = load('fast.json'), load('mid.json'), load('slow.json'), load('weather.json'), load('cams.json'), load('places.json')
+    step(pl, 'places', 1440, places)
+    if pl.get('airports'):
+        save('places.json', pl)
     step(fast, 'flights', 5 if os.environ.get('OPENSKY_ID') else 20, flights)
     step(fast, 'quakes', 5, quakes)
     step(fast, 'sirens', 5, sirens)
@@ -639,10 +865,12 @@ def main():
     step(slow, 'risk', 180, risk)
     step(slow, 'rates', 180, rates)
     step(cm, 'cams', 1440, cams)
-    for name, part in (('fast.json', fast), ('mid.json', mid), ('slow.json', slow), ('weather.json', wx), ('cams.json', cm)):
+    step(fast, 'faa', 10, faa)
+    step(fast, 'apstat', 10, apstat)
+    for name, part in (('fast.json', fast), ('mid.json', mid), ('slow.json', slow), ('weather.json', wx), ('cams.json', cm), ('places.json', pl)):
         part['gen'] = int(NOW)
         save(name, part)
-    save('status.json', {'gen': int(NOW), 'log': LOG, 'at': {k: v for part in (fast, mid, slow, wx, cm) for k, v in part.get('_at', {}).items()}})
+    save('status.json', {'gen': int(NOW), 'log': LOG, 'at': {k: v for part in (fast, mid, slow, wx, cm, pl) for k, v in part.get('_at', {}).items()}})
 
 
 if __name__ == '__main__':
