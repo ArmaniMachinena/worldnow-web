@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
-<script>window.WN_BUILD="20261104085329";</script>
+<script>window.WN_BUILD="20261104085553";</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>World Now</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -349,7 +349,7 @@ function cname(t){ if(window.WN_LANG==='en') return t; if(!CN){ CN={}; var C=(wi
   return t; }
 function trNode(n){ var v=n.nodeValue; if(!v||v.length>420) return; var t=v.trim(); if(!t) return; var r=T(t); if(r===t) r=cname(t); if(r!==t) n.nodeValue=v.replace(t,r); }
 function trAttr(e){ ['title','placeholder','aria-label'].forEach(function(a){ var v=e.getAttribute&&e.getAttribute(a); if(v){ var r=T(v); if(r===v) r=cname(v); if(r!==v) e.setAttribute(a,r);} }); }
-function walk(root){ if(root.nodeType===3){ if(root.parentNode&&!SKIP[root.parentNode.nodeName]) trNode(root); return; }
+function walk(root){ if(root.nodeType===3){ if(root.parentNode&&!SKIP[root.parentNode.nodeName]&&!(root.parentNode.closest&&root.parentNode.closest('.nt'))) trNode(root); return; }
   if(root.nodeType!==1) return; if(root.nodeName==='INPUT'||root.nodeName==='TEXTAREA'){ trAttr(root); return; } if(SKIP[root.nodeName]) return; trAttr(root);
   var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT|NodeFilter.SHOW_ELEMENT,{acceptNode:function(x){return x.nodeType===1&&SKIP[x.nodeName]?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT}}),x;
   while(x=w.nextNode()){ if(x.nodeType===3) trNode(x); else trAttr(x); }
@@ -766,19 +766,20 @@ function airlinesHTML(a, s) {
   const seen = new Set((APAIR[a[1]] || []).filter(x => x.length === 3)), all = [...new Set([...seen, ...(APROUTES[a[1]] || [])])];
   if (!all.length) return '';
   all.sort((x, y) => (seen.has(y) - seen.has(x)) || ((AIRL[x] || [x])[0] > (AIRL[y] || [y])[0] ? 1 : -1));
-  const chip = c => { const w = AIRL[c] || [], d = (D.airlines || {})[c] || [], iata = w[1] || d[0] || c, nm = (w[0] || d[1] || c).replace(/ (Airlines?|Airways|Aviation|Air Lines)$/i, '');
-    return `<button data-al="${c}" style="display:inline-flex;align-items:center;gap:6px;margin:0 6px 6px 0;padding:5px 9px;border-radius:14px;font-size:12px;cursor:pointer;border:1px solid ${s.al === c ? 'var(--gold)' : 'var(--line)'};background:${s.al === c ? 'rgba(222,176,69,.12)' : 'transparent'};color:var(--fg)">${seen.has(c) ? '<span style="width:6px;height:6px;border-radius:50%;background:#4fd27a"></span>' : ''}<b style="font-family:var(--f-mono);font-size:11px">${esc(iata)}</b>${esc(nm.length > 18 ? nm.slice(0, 17) + '…' : nm)}</button>`; };
+  const chip = c => { const w = AIRL[c] || [], d = (D.airlines || {})[c] || [], iata = w[1] || d[0] || c, nm = (w[0] || d[1] || c).replace(/ (Airlines?|Airways|Aviation|Air Lines)$/i, ''), on = s.al === c;
+    return `<button data-al="${c}" class="nt" title="${esc(w[0] || d[1] || c)}" style="display:flex;align-items:center;gap:7px;width:100%;min-width:0;height:34px;padding:0 9px;border-radius:8px;font-size:12.5px;cursor:pointer;text-align:left;border:1px solid ${on ? 'var(--gold)' : 'var(--line)'};background:${on ? 'rgba(222,176,69,.14)' : 'rgba(255,255,255,.02)'};color:var(--fg)"><span style="flex:none;width:6px;height:6px;border-radius:50%;background:${seen.has(c) ? '#4fd27a' : 'transparent'}"></span><b style="flex:none;width:22px;font-family:var(--f-mono);font-size:11px;color:var(--gold)">${esc(iata)}</b><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(nm)}</span><span style="margin-left:auto;flex:none;color:var(--dim);font-size:11px">${on ? '▴' : '▾'}</span></button>`
+      + (on ? `<div class="nt" style="grid-column:1/-1;border:1px solid var(--gold);border-radius:8px;padding:2px 10px 6px;background:rgba(222,176,69,.06)">${airlineRow(c)}</div>` : ''); };
   return `<div class="kick sec">${wnTr('Airlines')} · ${all.length}</div><div style="font-size:11.5px;color:var(--dim);margin:-2px 0 8px">● ${wnTr('seen here this week')} · ${wnTr('others fly or flew this airport (route data)')} · ${wnTr('tap for contacts')}</div>`
-    + `<div>${all.map(chip).join('')}</div>` + (s.al ? airlineRow(s.al) : '');
+    + `<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-flow:dense;gap:6px">${all.map(chip).join('')}</div>`;
 }
 function airlineRow(code) {
   const w = AIRL[code] || [], d = (D.airlines || {})[code] || [];
   const name = w[0] || d[1] || code, iata = w[1] || d[0] || '', web = w[4] || '', phone = (w[5] || '').replace(/^tel:/, ''), mail = w[6] || '';
   const digits = phone.replace(/[^\d]/g, '');
   const btn = (href, t) => `<a href="${esc(href)}" target="_blank" rel="noopener" style="display:inline-block;margin:4px 6px 0 0;padding:5px 9px;border:1px solid var(--line);border-radius:7px;font-size:12px;color:var(--fg);text-decoration:none">${t}</a>`;
-  return `<div style="padding:8px 0;border-bottom:1px solid var(--line)"><div style="font-weight:700;font-size:14px">${esc(name)} <span style="font-family:var(--f-mono);font-size:11px;color:var(--dim)">${esc([iata, code].filter(Boolean).join(' · '))}</span></div>`
+  return `<div style="padding:8px 0"><div style="font-weight:700;font-size:14px">${esc(name)} <span style="font-family:var(--f-mono);font-size:11px;color:var(--dim)">${esc([iata, code].filter(Boolean).join(' · '))}</span></div>`
     + (web ? btn(web, 'Website ↗') : '') + (phone ? btn('tel:' + digits, '📞 ' + esc(phone)) + btn('https://wa.me/' + digits, 'WhatsApp') : '') + (mail ? btn('mailto:' + mail, '✉️ ' + esc(mail)) : '')
-    + (!web && !phone ? btn('https://www.google.com/search?q=' + encodeURIComponent(name + ' airline contacts'), 'Find contacts ↗') : '') + `</div>`;
+    + btn('https://www.google.com/search?q=' + encodeURIComponent(name + ' airline contacts phone'), 'Find contacts ↗') + `</div>`;
 }
 const AP_WHY = {quiet: 'Usually busy, but no aircraft seen at the airport in the last 2 hours', low: 'Much less traffic than usual for this hour',
   incident: 'Strikes or attacks reported nearby in the news (24 h)', quake: 'Strong earthquake nearby (48 h)', disaster: 'Major natural disaster alert nearby (GDACS)'};
@@ -1662,7 +1663,7 @@ function renderSheet() {
       + (a[9] ? `<a href="${esc(a[9])}" target="_blank" rel="noopener" style="display:block;margin-top:10px;font-size:13px">Wikipedia ↗</a>` : '') + lookBtn();
     $('lookHere').onclick = () => openPoint(ll, cc);
     const bt = $('bdTabs'); if (bt) bt.onclick = e => { const b = e.target.closest('button'); if (!b) return; s.bt = b.dataset.b; const y = $('sheet').scrollTop; renderSheet(); };
-    body.querySelectorAll('[data-al]').forEach(el => el.onclick = () => { s.al = s.al === el.dataset.al ? null : el.dataset.al; renderSheet(); });
+    body.querySelectorAll('[data-al]').forEach(el => el.onclick = () => { const sc = [...document.querySelectorAll('#sheet, #sheet *')].filter(x => x.scrollTop > 0).map(x => [x, x.scrollTop]); s.al = s.al === el.dataset.al ? null : el.dataset.al; renderSheet(); sc.forEach(([x, y]) => { x.scrollTop = y; }); });
   } else if (s.type === 'port') {
     const q = PORTS[s.i], ll = [q[4], q[3]], cc = q[2] && C[q[2]] ? q[2] : countryAt(ll), hz = hazNear(ll, 40), c = hz.length ? '#f9d64d' : AP_NONE;
     $('shKick').textContent = 'Sea port · ' + (q[5] === 'L' ? 'large harbour' : 'medium harbour') + (q[1] ? ' · ' + q[1] : '');
