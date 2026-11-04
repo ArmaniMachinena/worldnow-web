@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
-<script>window.WN_BUILD="20261104095501";</script>
+<script>window.WN_BUILD="20261104095703";</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>WorldNow:Emergency</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -215,16 +215,14 @@ canvas.layer{position:absolute;inset:0;width:100%;height:100%;display:block;poin
   <canvas id="base" class="layer"></canvas>
   <canvas id="globe" aria-label="Globe: drag to rotate, tap for details"></canvas>
 
-  <script>(function(){var el=document.getElementById('wnLogo');if(!el)return;var mer=el.querySelectorAll('#wnMer ellipse'),dot=document.getElementById('wnDot'),ph=0.35,vel=0,taps=0,last=0,raf=0,prev=0;
-/* each tap (up to 5) spins the globe faster; it then slows down smoothly by itself */
-var SPEED=[0,20,40,65,95,130];
+  <script>document.addEventListener('DOMContentLoaded',function(){var el=document.getElementById('wnLogo');if(!el)return;var mer=el.querySelectorAll('#wnMer ellipse'),dot=document.getElementById('wnDot'),ph=0.35,lvl=0,vel=0,raf=0,prev=0;
+/* taps 1-5 = speed steps; step 5 = one full turn in 30 s; the 6th tap stops the globe */
+var FULL=2*Math.PI/30;
 function draw(){for(var i=0;i<mer.length;i++){var a=ph+i*Math.PI/3;mer[i].setAttribute('rx',Math.abs(Math.sin(a)*16.5).toFixed(2));}
 var d=ph+0.9;dot.setAttribute('cx',(20+Math.sin(d)*12).toFixed(2));dot.style.opacity=Math.cos(d)>0?1:0;}
-function step(t){var dt=Math.min(.05,(t-prev)/1000);prev=t;ph=(ph+vel*dt)%(Math.PI*2);vel*=Math.pow(.42,dt);draw();
-el.style.filter=vel>90?'drop-shadow(0 0 '+Math.min(10,(vel-90)/4).toFixed(1)+'px rgba(222,176,69,.9))':'';
-if(vel>.15)raf=requestAnimationFrame(step);else{raf=0;vel=0;el.style.filter='';}}
-draw();el.addEventListener('click',function(){var now=performance.now();if(now-last>3500)taps=0;last=now;taps=Math.min(5,taps+1);
-vel=Math.max(vel,SPEED[taps]);if(!raf){prev=now;raf=requestAnimationFrame(step);}});})();</script>
+function step(t){var dt=Math.min(.1,(t-prev)/1000);prev=t;var target=FULL*lvl/5;vel+=(target-vel)*Math.min(1,dt*3);ph=(ph+vel*dt)%(Math.PI*2);draw();
+el.style.filter=lvl===5?'drop-shadow(0 0 4px rgba(222,176,69,.9))':'';if(lvl>0||vel>0.002)raf=requestAnimationFrame(step);else{raf=0;vel=0;}}
+draw();el.addEventListener('click',function(){lvl=lvl>=5?0:lvl+1;el.setAttribute('title',lvl?('Speed '+lvl+'/5'):'Stopped');if(!raf){prev=performance.now();raf=requestAnimationFrame(step);}});});</script>
   <header id="hdr" class="panel">
     <div class="hrow">
       <div style="display:flex;align-items:center;gap:10px">
