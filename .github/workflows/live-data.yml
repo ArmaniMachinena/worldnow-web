@@ -25,6 +25,8 @@ jobs:
         run: |
           git clone --quiet --depth 1 --branch data "https://github.com/${GITHUB_REPOSITORY}.git" prev || mkdir -p prev
           mkdir -p out && cp prev/*.json out/ 2>/dev/null || true
+      - name: Python packages
+        run: pip install --quiet h3 || true
       - name: Collect and publish every 5 minutes
         env:
           OPENSKY_ID: ${{ secrets.OPENSKY_ID }}

@@ -436,7 +436,8 @@ def incidents(p):
     groups = {}
     for e in events:
         k = (round(e[1], 1), round(e[2], 1))
-        g = groups.setdefault(k, {'lat': e[1], 'lon': e[2], 'place': e[3], 'n': 0, 'src': 0, 'urls': [], 't': 0, 'codes': set()})
+        g = groups.setdefault(k, {'lat': e[1], 'lon': e[2], 'place': e[3], 'n': 0, 'src': 0, 'urls': [], 't': 0, 'codes': set(), 'dom': set()})
+        g['dom'].add(re.sub(r'^www\.', '', urllib.parse.urlparse(e[6]).netloc.lower()))
         g['n'] += 1; g['src'] += e[5]; g['t'] = max(g['t'], e[0]); g['codes'].add(e[4])
         if e[6] not in g['urls'] and len(g['urls']) < 4:
             g['urls'].append(e[6])
@@ -444,7 +445,7 @@ def incidents(p):
     for g in groups.values():
         if g['src'] < 3:
             continue
-        out.append([g['lat'], g['lon'], g['place'], g['n'], [[_slug_title(u), u] for u in g['urls']], g['t'], g['src'], sorted(g['codes'])])
+        out.append([g['lat'], g['lon'], g['place'], g['n'], [[_slug_title(u), u] for u in g['urls']], g['t'], g['src'], sorted(g['codes']), len(g['dom'])])
     out.sort(key=lambda x: -x[6])
     log(f'     incidents: {got} files, {len(events)} events, {len(out)} places')
     if not out and not events:
@@ -904,6 +905,79 @@ def faa(p):
     p['faaRaw'] = res
 
 
+# ---------------------------------------------------------------- situation monitor sources
+def outages(p):
+    """Internet outages by country over the last 24 h (IODA, Georgia Tech; open API)."""
+    until = int(NOW); frm = until - 24 * 3600
+    d = jget(f'https://api.ioda.inetintel.cc.gatech.edu/v2/outages/summary?from={frm}&until={until}&entityType=country', timeout=60)
+    out = {}
+    for r in d.get('data') or []:
+        ent = r.get('entity') or {}
+        cc = (ent.get('code') or '').upper()
+        sc = (r.get('scores') or {}).get('overall') or 0
+        if cc and sc:
+            out[cc] = [round(sc), r.get('event_cnt') or 0]
+    alerts = {}
+    try:
+        a = jget(f'https://api.ioda.inetintel.cc.gatech.edu/v2/outages/alerts?from={until - 6 * 3600}&until={until}&entityType=country', timeout=60)
+        for r in a.get('data') or []:
+            cc = ((r.get('entity') or {}).get('code') or '').upper()
+            if cc and r.get('level') in ('critical', 'warning'):
+                alerts[cc] = 'critical' if r.get('level') == 'critical' or alerts.get(cc) == 'critical' else 'warning'
+    except Exception as e:
+        log(f'     ioda alerts: {type(e).__name__}')
+    p['outages'] = out
+    p['outagesNow'] = alerts
+    log(f'     outages: {len(out)} countries, {len(alerts)} with alerts in 6 h')
+
+
+def gpsjam(p):
+    """GPS interference from aircraft navigation accuracy (gpsjam.org daily H3 cells)."""
+    import h3
+    rows, day = None, None
+    for back in (1, 2, 3):
+        day = (datetime.now(timezone.utc) - timedelta(days=back)).strftime('%Y-%m-%d')
+        try:
+            rows = list(csv.DictReader(io.StringIO(get(f'https://gpsjam.org/data/{day}-h3_4.csv', timeout=60))))
+            break
+        except Exception:
+            rows = None
+    if not rows:
+        raise RuntimeError('no gpsjam data')
+    out = []
+    for r in rows:
+        try:
+            good, bad = int(r['count_good_aircraft']), int(r['count_bad_aircraft'])
+        except Exception:
+            continue
+        tot = good + bad
+        if tot < 3:
+            continue
+        ratio = bad / tot
+        if ratio < 0.02:
+            continue
+        la, lo = h3.cell_to_latlng(r['hex'])
+        out.append([round(la, 3), round(lo, 3), round(ratio, 3), tot])
+    out.sort(key=lambda x: -x[2])
+    p['gpsjam'] = out[:4000]
+    p['gpsjamDay'] = day
+    log(f'     gpsjam {day}: {len(out)} cells with interference')
+
+
+def mil(p):
+    """Military aircraft with ADS-B (adsb.lol, open data, no key)."""
+    d = jget('https://api.adsb.lol/v2/mil', timeout=40)
+    out = []
+    for a in d.get('ac') or []:
+        if a.get('lat') is None or a.get('lon') is None:
+            continue
+        alt = a.get('alt_baro')
+        out.append([round(a['lat'], 3), round(a['lon'], 3), round(a.get('track') or 0), alt if isinstance(alt, (int, float)) else 0,
+                    round(a.get('gs') or 0), (a.get('flight') or '').strip(), a.get('t') or '', a.get('r') or '', a.get('hex') or ''])
+    p['mil'] = out
+    p['milAt'] = int(NOW)
+
+
 # ---------------------------------------------------------------- cameras (24 h)
 def cams(p):
     # Public camera index from OSIRIS (open source, MIT; its documented API needs no key).
@@ -949,6 +1023,9 @@ def main():
     step(slow, 'rates', 180, rates)
     step(cm, 'cams', 1440, cams)
     step(fast, 'faa', 10, faa)
+    step(fast, 'mil', 5, mil)
+    step(mid, 'outages', 30, outages)
+    step(slow, 'gpsjam', 360, gpsjam)
     step(fast, 'apstat', 10, apstat)
     for name, part in (('fast.json', fast), ('mid.json', mid), ('slow.json', slow), ('weather.json', wx), ('cams.json', cm), ('places.json', pl)):
         part['gen'] = int(NOW)
