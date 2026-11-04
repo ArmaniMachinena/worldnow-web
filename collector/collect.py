@@ -503,7 +503,7 @@ def weather(p):
 
 
 # ---------------------------------------------------------------- slow (6 h)
-SAT_GROUPS = [('stations', 'station'), ('gnss', 'gnss'), ('weather', 'weather')]
+SAT_GROUPS = [('military', 'military'), ('resource', 'earth'), ('planet', 'earth'), ('science', 'science'), ('geo', 'geo'), ('stations', 'station'), ('gnss', 'gnss'), ('weather', 'weather')]
 
 
 def tle_list(text):
@@ -519,13 +519,16 @@ def sats(p):
     base = 'https://celestrak.org/NORAD/elements/gp.php?FORMAT=tle&GROUP='
     tag = {}
     for g, name in SAT_GROUPS:
-        for n, l1, l2 in tle_list(get(base + g)):
-            tag[l1[2:7]] = name
+        try:
+            for n, l1, l2 in tle_list(get(base + g)):
+                tag[l1[2:7]] = name
+        except Exception as e:
+            log(f'     sats {g}: {type(e).__name__}')
     out = []
     for n, l1, l2 in tle_list(get(base + 'active', timeout=90)):
         nid = l1[2:7]
-        grp = tag.get(nid) or ('starlink' if n.startswith('STARLINK') else 'oneweb' if n.startswith('ONEWEB')
-                               else 'iridium' if n.startswith('IRIDIUM') else 'other')
+        grp = ('starlink' if n.startswith('STARLINK') else 'oneweb' if n.startswith('ONEWEB') else 'kuiper' if n.startswith('KUIPER')
+               else 'qianfan' if n.startswith(('QIANFAN', 'THOUSAIL', 'G60')) else 'iridium' if n.startswith('IRIDIUM') else None) or tag.get(nid) or 'other'
         out.append([n, grp, l1, l2])
     if len(out) < 5000:
         raise RuntimeError(f'only {len(out)} satellites')
@@ -1075,6 +1078,8 @@ def main():
     step(mid, 'kznews', 30, kznews)
     step(mid, 'incidents', 30, incidents)
     step(wx, 'weather', 60, weather)
+    if 'kuiper' not in json.dumps([x[1] for x in slow.get('sats', [])[:1]]) and not slow.get('satGroupsV2'):
+        slow.get('_at', {}).pop('sats', None); slow['satGroupsV2'] = 1
     step(slow, 'sats', 360, sats)
     step(slow, 'risk', 180, risk)
     step(slow, 'rates', 180, rates)
