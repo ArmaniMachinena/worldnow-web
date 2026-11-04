@@ -978,6 +978,63 @@ def mil(p):
     p['milAt'] = int(NOW)
 
 
+# ---------------------------------------------------------------- live TV and markets
+STREAMS = [('aje', 'UCNye-wNBqNL5ZzHSJj3l8Bg'), ('aja', 'UCfiwzLy-8yKzIbsmZTzxDgw'), ('sky', 'UCoMdktPbSTixAyNGwb-UYkQ'), ('dw', 'UCknLrEdhRCp1aegoMqRaCZg'),
+           ('f24', 'UCQfwfsi5VrQ8yKZ-UWmAEFg'), ('eun', 'UCSrZ3UV4jOidv8ppoVuvW9Q'), ('nbc', 'UCeY0bbntWzzVIaj2z3QigXg'), ('abc', 'UCBi2mrWuNuyYy4gbM6fW3Mg'),
+           ('cbs', 'UC8p1vwvWtl6T73JiExfWs1g'), ('fox', 'UCJg9wBPyKMNA5sRDnvzmkdg'), ('blm', 'UCIALMKvObZNtJ6AmdCLP7Lg'), ('trt', 'UC7fWeaHhqgM4Ry-RMpM2YYw'),
+           ('wion', 'UC_gUM8rL-Lrg6O3adPW9K1g'), ('cna', 'UC83jt4dlz1Gjl58fzQrrHZg'), ('abcau', 'UCVgO39Bk5sMo66-6o6Spn6Q'), ('nhk', 'UCSPEjw8F2nQDtmUKPFNF7_A'),
+           ('i24', 'UCvHDpsWKADrDia0c99X37vg'), ('reu', 'UChqUTb7kYRX8-EiaN3XFrSQ'), ('ap', 'UC52X5wxOL_s5yw0dQk7NtgA'), ('kz24', 'UCnAFKvDuqBGkIfV8Vn0J_CQ')]
+
+
+def streams(p):
+    """Current live video of each news channel (YouTube channel /live page), so the site can embed it."""
+    out, ok = {}, 0
+    for key, ch in STREAMS:
+        try:
+            h = get(f'https://www.youtube.com/channel/{ch}/live', headers={'Accept-Language': 'en-US,en;q=0.8', 'Cookie': 'CONSENT=YES+1'}, timeout=20)
+            m = re.search(r'<link rel="canonical" href="https://www\.youtube\.com/watch\?v=([\w-]{11})"', h)
+            live = m and ('"isLiveNow":true' in h or '"isLive":true' in h)
+            out[key] = m.group(1) if live else ''
+            ok += 1 if live else 0
+        except Exception as e:
+            out[key] = ''
+            log(f'     stream {key}: {type(e).__name__}')
+    if not ok:
+        raise RuntimeError('no live streams found')
+    p['streams'] = out
+    log(f'     streams: {ok}/{len(STREAMS)} live')
+
+
+MARKETS = [('idx', 'S&P 500', '^GSPC'), ('idx', 'Dow Jones', '^DJI'), ('idx', 'Nasdaq', '^IXIC'), ('idx', 'FTSE 100', '^FTSE'), ('idx', 'DAX', '^GDAXI'),
+           ('idx', 'CAC 40', '^FCHI'), ('idx', 'Nikkei 225', '^N225'), ('idx', 'Hang Seng', '^HSI'), ('idx', 'Shanghai Composite', '000001.SS'), ('idx', 'Sensex', '^BSESN'),
+           ('idx', 'VIX', '^VIX'),
+           ('cmd', 'Brent', 'BZ=F'), ('cmd', 'WTI', 'CL=F'), ('cmd', 'Natural gas', 'NG=F'), ('cmd', 'Gold', 'GC=F'), ('cmd', 'Silver', 'SI=F'), ('cmd', 'Copper', 'HG=F'), ('cmd', 'Wheat', 'ZW=F'),
+           ('fx', 'USD/KZT', 'KZT=X'), ('fx', 'EUR/USD', 'EURUSD=X'), ('fx', 'USD/RUB', 'RUB=X'), ('fx', 'USD/CNY', 'CNY=X'), ('fx', 'USD/TRY', 'TRY=X'), ('fx', 'Dollar index', 'DX-Y.NYB'),
+           ('rate', 'US 10-year yield', '^TNX'),
+           ('cry', 'Bitcoin', 'BTC-USD'), ('cry', 'Ethereum', 'ETH-USD')]
+
+
+def markets(p):
+    """Key world markets: last price, change vs previous close, 5-day closes (Yahoo Finance chart endpoint)."""
+    out = []
+    for grp, name, sym in MARKETS:
+        try:
+            d = jget(f'https://query1.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(sym)}?range=5d&interval=1d', timeout=20)
+            r = d['chart']['result'][0]; meta = r['meta']
+            price = meta.get('regularMarketPrice'); prev = meta.get('chartPreviousClose') or meta.get('previousClose')
+            closes = [c for c in (r.get('indicators', {}).get('quote', [{}])[0].get('close') or []) if c is not None]
+            if len(closes) >= 2:
+                prev = closes[-2] if abs(closes[-1] - price) / max(1e-9, price) < 0.02 else closes[-1]
+            chg = (price - prev) / prev * 100 if price and prev else None
+            out.append([grp, name, sym, round(price, 4), round(chg, 2) if chg is not None else None, [round(c, 4) for c in closes[-6:]], meta.get('regularMarketTime') or 0])
+        except Exception as e:
+            log(f'     market {sym}: {type(e).__name__}')
+    if len(out) < 10:
+        raise RuntimeError(f'only {len(out)} markets')
+    p['markets'] = out
+    p['marketsAt'] = int(NOW)
+
+
 # ---------------------------------------------------------------- cameras (24 h)
 def cams(p):
     # Public camera index from OSIRIS (open source, MIT; its documented API needs no key).
@@ -1024,6 +1081,8 @@ def main():
     step(cm, 'cams', 1440, cams)
     step(fast, 'faa', 10, faa)
     step(fast, 'mil', 5, mil)
+    step(fast, 'markets', 10, markets)
+    step(mid, 'streams', 30, streams)
     step(mid, 'outages', 30, outages)
     step(slow, 'gpsjam', 360, gpsjam)
     step(fast, 'apstat', 10, apstat)
