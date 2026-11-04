@@ -252,10 +252,6 @@ def radar(p):
     p['radar'] = out
 
 
-def nkwind(p):
-    # Wind over Pickaxe Mt. (Natanz) for the experimental TEST NUCLEAR page.
-    p['nkwind'] = jget('https://api.open-meteo.com/v1/forecast?latitude=33.68&longitude=51.94&current=wind_speed_10m,wind_direction_10m'
-                       '&hourly=wind_speed_850hPa,wind_direction_850hPa,wind_speed_500hPa,wind_direction_500hPa&forecast_days=3&timezone=UTC')
 
 
 # ---------------------------------------------------------------- mid (30 min)
@@ -863,7 +859,6 @@ def main():
     step(fast, 'sirens', 5, sirens)
     step(fast, 'origins', 15, origins)
     step(fast, 'radar', 10, radar)
-    step(fast, 'nkwind', 30, nkwind)
     step(mid, 'gdacs', 30, gdacs)
     step(mid, 'eonet', 60, eonet)
     step(mid, 'fires', 30, fires)
