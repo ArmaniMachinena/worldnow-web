@@ -993,7 +993,7 @@ def streams(p):
         try:
             h = get(f'https://www.youtube.com/channel/{ch}/live', headers={'Accept-Language': 'en-US,en;q=0.8', 'Cookie': 'CONSENT=YES+1'}, timeout=20)
             m = re.search(r'<link rel="canonical" href="https://www\.youtube\.com/watch\?v=([\w-]{11})"', h)
-            live = m and ('"isLiveNow":true' in h or '"isLive":true' in h)
+            live = bool(m) and '"isUpcoming":true' not in h[:200000]
             out[key] = m.group(1) if live else ''
             ok += 1 if live else 0
         except Exception as e:
