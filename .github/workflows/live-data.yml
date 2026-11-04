@@ -1,9 +1,11 @@
 # Collects open data every 5 minutes and publishes it to the "data" branch (one commit, force-pushed).
 # The site reads https://raw.githubusercontent.com/ArmaniMachinena/worldnow-web/data/*.json
+# GitHub starts scheduled runs only about once an hour, so each run keeps going for ~55 minutes
+# and collects every 5 minutes inside it (public repository: Actions minutes are free).
 name: live-data
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/20 * * * *'
   workflow_dispatch:
 permissions:
   contents: write
@@ -13,7 +15,7 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 9
+    timeout-minutes: 70
     steps:
       - uses: actions/checkout@v4
         with:
@@ -23,16 +25,22 @@ jobs:
         run: |
           git clone --quiet --depth 1 --branch data "https://github.com/${GITHUB_REPOSITORY}.git" prev || mkdir -p prev
           mkdir -p out && cp prev/*.json out/ 2>/dev/null || true
-      - name: Collect
+      - name: Collect and publish every 5 minutes
         env:
           OPENSKY_ID: ${{ secrets.OPENSKY_ID }}
           OPENSKY_SECRET: ${{ secrets.OPENSKY_SECRET }}
           FIRMS_KEY: ${{ secrets.FIRMS_KEY }}
-        run: python3 src/collector/collect.py prev out
-      - name: Publish
         run: |
-          cd out
-          git init --quiet -b data
-          git add -A
-          git -c user.name="worldnow-bot" -c user.email="worldnow-bot@users.noreply.github.com" commit --quiet -m "data $(date -u +%FT%TZ)"
-          git push --quiet --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" data
+          start=$(date +%s)
+          while :; do
+            t0=$(date +%s)
+            python3 src/collector/collect.py prev out || true
+            rm -rf pub && mkdir pub && cp out/*.json pub/
+            (cd pub && git init --quiet -b data && git add -A \
+              && git -c user.name="worldnow-bot" -c user.email="worldnow-bot@users.noreply.github.com" commit --quiet -m "data $(date -u +%FT%TZ)" \
+              && git push --quiet --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" data) || echo "push failed"
+            rm -rf prev && cp -r out prev
+            now=$(date +%s)
+            [ $((now - start)) -gt 3000 ] && break
+            sleep $(( 300 - (now - t0) > 10 ? 300 - (now - t0) : 10 ))
+          done

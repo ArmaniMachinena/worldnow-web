@@ -6,7 +6,7 @@ Writes fast.json (5 min), mid.json (30 min), slow.json (6 h), weather.json (60 m
 Each part is refreshed only when it is older than its interval; a failed source keeps its previous data.
 Standard library only. Ships (Open Waters) are deliberately NOT collected: personal use only.
 """
-import csv, gzip, io, json, os, re, sys, time, urllib.parse, urllib.request
+import csv, gzip, io, json, os, re, sys, time, urllib.error, urllib.parse, urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
@@ -165,6 +165,10 @@ def flights(p):
         ap_activity(d.get('states') or [], d.get('time') or int(NOW))
     except Exception as e:
         log(f'     airports activity: {type(e).__name__}: {e}')
+    try:
+        ap_board(d.get('states') or [], p)
+    except Exception as e:
+        log(f'     airports board: {type(e).__name__}: {e}')
     for s in d.get('states') or []:
         lon, lat = s[5], s[6]
         if lat is None or lon is None or s[8]:
@@ -646,10 +650,25 @@ def places(p):
                       for f in d['features'] if f.get('geometry')]
         log(f'     ports: {len(p["ports"])} (Natural Earth)')
     # airlines: ICAO code -> [name, IATA, callsign, country, web, phone, email]
-    al = {}
+    al, byid = {}, {}
     for r in csv.reader(io.StringIO(get('https://raw.githubusercontent.com/jpatokal/openflights/master/data/airlines.dat'))):
         if len(r) >= 8 and r[7] == 'Y' and re.fullmatch(r'[A-Z]{3}', r[4] or ''):
             al[r[4]] = [r[1], r[3] if r[3] not in ('\\N', '-') else '', r[5] if r[5] != '\\N' else '', r[6], '', '', '']
+            byid[r[0]] = r[4]
+    try:
+        i2k = {a[0]: a[1] for a in ap if a[0]}
+        rt = {}
+        for r in csv.reader(io.StringIO(get('https://raw.githubusercontent.com/jpatokal/openflights/master/data/routes.dat', timeout=90))):
+            if len(r) < 6 or r[1] not in byid:
+                continue
+            for code in (r[2], r[4]):
+                k = i2k.get(code)
+                if k:
+                    rt.setdefault(k, set()).add(byid[r[1]])
+        p['apRoutes'] = {k: sorted(v) for k, v in rt.items()}
+        log(f'     airline routes: {len(rt)} airports')
+    except Exception as e:
+        log(f'     routes: {type(e).__name__}: {str(e)[:120]}')
     try:
         q = ('SELECT ?icao ?name ?web ?phone ?mail WHERE { ?a wdt:P230 ?icao . OPTIONAL { ?a wdt:P856 ?web } '
              'OPTIONAL { ?a wdt:P1329 ?phone } OPTIONAL { ?a wdt:P968 ?mail } '
@@ -740,6 +759,66 @@ def ap_activity(states, t):
     save('aphist.json', {'snaps': snaps, 'counts': {k: c for k, c in counts.items() if c}, 'air': {k: v for k, v in airl.items() if v}})
 
 
+def route_of(cache, cs, budget):
+    r = cache.get(cs)
+    if r and NOW - r[2] < 5 * 86400:
+        return r
+    if budget[0] <= 0:
+        return None
+    budget[0] -= 1
+    try:
+        d = jget(f'https://api.adsbdb.com/v0/callsign/{cs}', timeout=8)
+        fr = (d.get('response') or {}).get('flightroute') if isinstance(d.get('response'), dict) else None
+        r = [fr['origin']['icao_code'], fr['destination']['icao_code'], NOW] if fr else [None, None, NOW]
+    except urllib.error.HTTPError as e:
+        r = [None, None, NOW] if e.code == 404 else None
+    except Exception:
+        r = None
+    if r:
+        cache[cs] = r
+    return r
+
+
+def ap_board(states, p):
+    """Departures and arrivals right now: aircraft within 150 km of an airport, below 6 km or on the ground,
+    whose route (adsbdb) starts or ends there. Rows: [callsign, other airport ICAO, D|A, alt m, km, on_ground]."""
+    import math
+    ap, grid = AP()
+    if not ap:
+        return
+    cache = load('routes_cache.json')
+    cache = {k: v for k, v in cache.items() if NOW - v[2] < 6 * 86400}
+    budget = [int(os.environ.get('ROUTE_BUDGET', '250'))]
+    byk = {a[1]: a for a in ap}
+    near = []
+    for st in states:
+        lon, lat, cs = st[5], st[6], (st[1] or '').strip()
+        if lat is None or lon is None or not re.fullmatch(r'[A-Z]{3}\d[0-9A-Z]*', cs):
+            continue
+        alt = st[7] if st[7] is not None else st[13]
+        if not st[8] and (alt is None or alt > 6000):
+            continue
+        near.append((0 if st[8] else (alt or 0), cs, lat, lon, bool(st[8]), alt or 0))
+    near.sort()
+    board = {}
+    for _, cs, lat, lon, ground, alt in near:
+        r = route_of(cache, cs, budget)
+        if not r or not r[0]:
+            continue
+        for k, other, dirn in ((r[0], r[1], 'D'), (r[1], r[0], 'A')):
+            a = byk.get(k)
+            if not a:
+                continue
+            dy = (lat - a[5]) * 111.2; dx = (lon - a[6]) * 111.2 * max(0.05, abs(math.cos(lat * 0.01745)))
+            km = (dx * dx + dy * dy) ** .5
+            if km <= 150:
+                board.setdefault(k, []).append([cs, other, dirn, round(alt), round(km), 1 if ground else 0])
+    save('routes_cache.json', cache)
+    p['apboard'] = {k: sorted(v, key=lambda x: x[4])[:40] for k, v in board.items()}
+    p['apboardAt'] = int(NOW)
+    log(f'     board: {len(board)} airports, {sum(len(v) for v in board.values())} flights, {250 - budget[0]} route lookups')
+
+
 def apstat(p):
     """Traffic light per airport: G = traffic as usual, Y = much less than usual or a hazard/incident/FAA delay nearby,
     R = usually busy but no aircraft seen for 2+ hours, or closed by the FAA. No light when ADS-B coverage is too thin."""
@@ -753,8 +832,8 @@ def apstat(p):
     def avg(c, hours):
         n = sum(snaps.get(str(x), 0) for x in hours)
         return (sum(c.get(str(x), 0) for x in hours) / n) if n else None
-    recent_h = [nowh, nowh - 1]
-    base_h = [x for x in range(nowh - 7 * 24, nowh - 2)]
+    recent_h = [nowh, nowh - 1, nowh - 2]
+    base_h = [x for x in range(nowh - 7 * 24, nowh - 3)]
     same_h = [nowh - 24 * d + o for d in range(1, 8) for o in (-1, 0, 1)]
     # hazards near airports: incidents (24 h), big quakes, GDACS orange/red
     mid, fast = load('mid.json'), load('fast.json')
@@ -778,13 +857,13 @@ def apstat(p):
         ref = same if same is not None and sum(snaps.get(str(x), 0) for x in same_h) >= 6 else base
         why = []
         st = ''
-        if ref is not None and ref >= 1.0 and rec is not None:
-            if rec == 0 and ref >= 2:
-                st = 'R'; why.append('quiet')
-            elif rec < ref * 0.35:
+        nrec = sum(snaps.get(str(x), 0) for x in recent_h)
+        if rec is not None and rec > 0:
+            st = 'G'
+            if ref is not None and ref >= 2 and rec < ref * 0.3 and nrec >= 2:
                 st = 'Y'; why.append('low')
-            else:
-                st = 'G'
+        elif rec == 0 and ref is not None and ref >= 1.5 and nrec >= 2:
+            st = 'R'; why.append('quiet')
         for la, lo, km, kind in haz:
             if abs(la - a[5]) < 2 and abs(lo - a[6]) < 2:
                 d = 6371 * math.acos(min(1, math.sin(math.radians(la)) * math.sin(math.radians(a[5])) +
@@ -849,7 +928,7 @@ def cams(p):
 # ---------------------------------------------------------------- run
 def main():
     fast, mid, slow, wx, cm, pl = load('fast.json'), load('mid.json'), load('slow.json'), load('weather.json'), load('cams.json'), load('places.json')
-    if not pl.get('ports') or not pl.get('airlines'):
+    if not pl.get('ports') or not pl.get('airlines') or 'apRoutes' not in pl:
         pl.get('_at', {}).pop('places', None)
     step(pl, 'places', 1440, places)
     if pl.get('airports'):
