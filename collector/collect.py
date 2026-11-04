@@ -641,7 +641,14 @@ def places(p):
             p['ports'] = pr
         log(f'     ports: {len(pr)}')
     except Exception as e:
-        log(f'     ports: {type(e).__name__}: {str(e)[:120]}')
+        log(f'     ports WPI: {type(e).__name__}: {str(e)[:120]}')
+    if not p.get('ports'):
+        # fallback: Natural Earth 1:10m ports (public domain), with port websites
+        d = jget('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_ports.geojson', timeout=60)
+        p['ports'] = [[f['properties'].get('name') or '', '', '', round(f['geometry']['coordinates'][1], 4), round(f['geometry']['coordinates'][0], 4),
+                       'L' if (f['properties'].get('scalerank') or 9) <= 5 else 'M', '', f['properties'].get('website') or '']
+                      for f in d['features'] if f.get('geometry')]
+        log(f'     ports: {len(p["ports"])} (Natural Earth)')
     # airlines: ICAO code -> [name, IATA, callsign, country, web, phone, email]
     al = {}
     for r in csv.reader(io.StringIO(get('https://raw.githubusercontent.com/jpatokal/openflights/master/data/airlines.dat'))):
