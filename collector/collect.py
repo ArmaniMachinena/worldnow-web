@@ -853,6 +853,8 @@ def cams(p):
 # ---------------------------------------------------------------- run
 def main():
     fast, mid, slow, wx, cm, pl = load('fast.json'), load('mid.json'), load('slow.json'), load('weather.json'), load('cams.json'), load('places.json')
+    if not pl.get('ports') or not pl.get('airlines'):
+        pl.get('_at', {}).pop('places', None)
     step(pl, 'places', 1440, places)
     if pl.get('airports'):
         save('places.json', pl)
