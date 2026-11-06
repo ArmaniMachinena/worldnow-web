@@ -463,7 +463,8 @@ def fires(p):
 
 
 WARWORDS = re.compile(r'\b(strikes?|attack\w*|drones?|missiles?|rockets?|explosi\w*|blasts?|shell(ing|ed)|bomb\w*|airstrikes?|tankers?|vessels?|war|troops|army|military|killed|clash\w*|fighting|offensive|raids?|artillery|gunmen|insurgents?|militants?|jihadists?|terror\w*)\b')
-GDELT_ROOTS = {'18': 'assault', '19': 'fight', '20': 'mass violence'}
+GDELT_ROOTS = {'14': 'protest', '18': 'assault', '19': 'fight', '20': 'mass violence'}
+RIOTWORDS = re.compile(r'\b(riots?|rioters?|rioting|unrest|clash\w*|tear ?gas|looting|looters?|barricades?|protests?|protesters?|demonstrat\w*|police)\b')
 
 
 def _slug_title(u):
@@ -502,9 +503,14 @@ def incidents(p):
                 continue
             # armed-conflict codes only (bombings, military force, small arms, artillery, air strikes, ceasefire breaches,
             # assassinations, mass violence), city-level places only, and a war-like word in the article address
-            if not c[26].startswith(('183', '186', '190', '193', '194', '195', '196', '20')) or c[51] not in ('3', '4'):
+            if c[51] not in ('3', '4'):
                 continue
-            if not WARWORDS.search(c[60].lower().replace('_', ' ')):
+            u = c[60].lower().replace('_', ' ').replace('-', ' ')
+            if c[28] == '14':
+                # riots and violent protests (CAMEO 145) or protests the article itself calls clashes/riots/unrest
+                if not (c[26].startswith('145') or (c[26].startswith('14') and RIOTWORDS.search(u) and re.search(r'riot|clash|tear ?gas|unrest|loot|barricade', u))):
+                    continue
+            elif not c[26].startswith(('183', '186', '190', '193', '194', '195', '196', '20')) or not WARWORDS.search(u):
                 continue
             try:
                 events.append([int(datetime.strptime(c[59], '%Y%m%d%H%M%S').replace(tzinfo=timezone.utc).timestamp()),
