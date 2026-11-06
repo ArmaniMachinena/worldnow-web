@@ -196,6 +196,88 @@ def quakes(p):
     p['quakesRef'] = max(q['t'] for q in out) if out else int(NOW * 1000)
 
 
+EQCA_BOX = (34, 56, 46, 96)  # lat min/max, lon min/max: Central Asia + Xinjiang + Caspian
+
+
+def _hav(a, b, c, d):
+    import math
+    f1, f2 = math.radians(a), math.radians(c)
+    x = math.sin((f2 - f1) / 2) ** 2 + math.cos(f1) * math.cos(f2) * math.sin(math.radians(d - b) / 2) ** 2
+    return 2 * 6371 * math.asin(math.sqrt(x))
+
+
+def eqca(p):
+    """Central Asia earthquakes from several agencies, merged into one event list."""
+    import datetime as _dt
+    la0, la1, lo0, lo1 = EQCA_BOX
+    st = _dt.datetime.utcfromtimestamp(NOW - 7 * 86400).strftime('%Y-%m-%dT%H:%M:%S')
+    rec, ok = [], {}
+    def inbox(la, lo): return la0 <= la <= la1 and lo0 <= lo <= lo1
+    try:
+        d = jget(f'https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime={st}&minlatitude={la0}&maxlatitude={la1}&minlongitude={lo0}&maxlongitude={lo1}&minmagnitude=2')
+        for f in d['features']:
+            q, c = f['properties'], f['geometry']['coordinates']
+            if q.get('mag') is None: continue
+            rec.append(['usgs', q['time'], c[1], c[0], c[2], q['mag'], q.get('magType') or '', q.get('place') or '', (q.get('net') or '').upper(), q.get('url') or ''])
+        ok['usgs'] = len(d['features'])
+    except Exception as e:
+        log('eqca usgs', e)
+    try:
+        d = jget(f'https://www.seismicportal.eu/fdsnws/event/1/query?format=json&start={st}&minlat={la0}&maxlat={la1}&minlon={lo0}&maxlon={lo1}&minmag=2&limit=500')
+        for f in d['features']:
+            q = f['properties']
+            t = int(_dt.datetime.fromisoformat(q['time'].replace('Z', '+00:00')).timestamp() * 1000)
+            rec.append(['emsc', t, q['lat'], q['lon'], q.get('depth'), q.get('mag'), q.get('magtype') or '', q.get('flynn_region') or '', q.get('auth') or '', 'https://www.seismicportal.eu/eventdetails.html?unid=' + q.get('unid', '')])
+        ok['emsc'] = len(d['features'])
+    except Exception as e:
+        log('eqca emsc', e)
+    try:
+        t = get(f'https://geofon.gfz.de/fdsnws/event/1/query?format=text&starttime={st}&minlat={la0}&maxlat={la1}&minlon={lo0}&maxlon={lo1}&minmag=2')
+        n = 0
+        for ln in t.splitlines():
+            if not ln or ln.startswith('#'): continue
+            c = ln.split('|')
+            if len(c) < 13: continue
+            tt = int(_dt.datetime.fromisoformat(c[1][:19]).replace(tzinfo=_dt.timezone.utc).timestamp() * 1000)
+            rec.append(['gfz', tt, float(c[2]), float(c[3]), float(c[4] or 0), float(c[10]), c[9], c[12], c[5], 'https://geofon.gfz.de/eqinfo/event.php?id=' + c[0]]); n += 1
+        ok['gfz'] = n
+    except Exception as e:
+        log('eqca gfz', e)
+    try:
+        d = jget('https://api.wolfx.jp/cenc_eqlist.json')
+        n = 0
+        for k, q in d.items():
+            if not k.startswith('No'): continue
+            la, lo = float(q['latitude']), float(q['longitude'])
+            if not inbox(la, lo): continue
+            tt = int(_dt.datetime.strptime(q['time'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=_dt.timezone(_dt.timedelta(hours=8))).timestamp() * 1000)
+            rec.append(['cenc', tt, la, lo, float(q.get('depth') or 0), float(q['magnitude']), 'M', q.get('placeName') or '', 'CENC', 'https://news.ceic.ac.cn/']); n += 1
+        ok['cenc'] = n
+    except Exception as e:
+        log('eqca cenc', e)
+    rec = [r for r in rec if r[5] is not None and inbox(r[2], r[3]) and r[1] >= (NOW - 7 * 86400) * 1000]
+    rec.sort(key=lambda r: r[1])
+    ev = []
+    for r in rec:
+        hit = None
+        for e in ev[-40:]:
+            if abs(e['t'] - r[1]) <= 90000 and _hav(e['la'], e['lo'], r[2], r[3]) <= 150 and r[0] not in e['s']:
+                hit = e; break
+        if not hit:
+            hit = {'t': r[1], 'la': r[2], 'lo': r[3], 'd': r[4], 's': {}}
+            ev.append(hit)
+        hit['s'][r[0]] = [r[5], r[6], r[8], r[7], r[9], r[1], round(r[2], 3), round(r[3], 3), r[4]]
+    for e in ev:
+        pref = next(k for k in ('usgs', 'emsc', 'gfz', 'cenc') if k in e['s'])
+        x = e['s'][pref]; e['t'], e['la'], e['lo'], e['d'] = x[5], x[6], x[7], x[8]
+        e['m'] = round(sorted(v[0] for v in e['s'].values())[len(e['s']) // 2], 1)
+        e['p'] = (e['s'].get('emsc') or e['s'].get('usgs') or x)[3]
+    ev.sort(key=lambda e: -e['t'])
+    p['eqca'] = ev[:400]
+    p['eqcaSrc'] = ok
+    p['eqcaAt'] = int(NOW * 1000)
+
+
 CITIES = json.load(open(os.path.join(HERE, 'israel_cities.json')))
 
 
@@ -1069,6 +1151,7 @@ def main():
         save('places.json', pl)
     step(fast, 'flights', 5 if os.environ.get('OPENSKY_ID') else 20, flights)
     step(fast, 'quakes', 5, quakes)
+    step(fast, 'eqca', 5, eqca)
     step(fast, 'sirens', 5, sirens)
     step(fast, 'origins', 15, origins)
     step(fast, 'radar', 10, radar)
