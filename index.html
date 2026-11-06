@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
-<script>window.WN_BUILD="20261106083001";</script>
+<script>window.WN_BUILD="20261106182424";</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>WorldNow:Emergency</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -297,6 +297,7 @@ canvas.layer{position:absolute;inset:0;width:100%;height:100%;display:block;poin
 .eqag a{display:flex;flex-direction:column;align-items:center;border:1px solid var(--edge);border-radius:7px;padding:3px 2px;color:var(--dim);text-decoration:none;font-family:var(--f-mono)}
 .eqag a span{font-size:9px;letter-spacing:.06em}.eqag a b{font-size:14px;color:var(--dim)}.eqag a i{font-style:normal;font-size:9px;white-space:nowrap;overflow:hidden;max-width:100%}
 .eqag a.on{border-color:rgba(217,169,60,.45);color:var(--fg)}.eqag a.on b{color:var(--fg)}.eqag a.on span{color:var(--gold)}
+@media (max-width:820px){body.eqopen .sheet{max-height:58% !important;min-height:0 !important}}
 </style>
 
 <style>
@@ -1297,7 +1298,12 @@ function eqI(m, km, h) { return 1.5 * m - 3.5 * Math.log10(Math.sqrt(km * km + M
 const EQ_ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 function eqIcol(i) { return i >= 7 ? '#8b0a1a' : i >= 6 ? '#e2463b' : i >= 5 ? '#f98c33' : i >= 4 ? '#f9d64d' : i >= 3 ? '#9fd3ff' : '#5b6372'; }
 function eqItxt(i) { return i >= 7 ? 'Damage to buildings likely' : i >= 6 ? 'Strong: objects fall, cracks in plaster' : i >= 5 ? 'Felt by everyone, sleepers wake' : i >= 4 ? 'Felt indoors by many' : i >= 3 ? 'Felt by few, upper floors' : 'Not felt'; }
-function eqState() { if (!S.eqn) S.eqn = {city: 'Almaty', r: 600, minM: 2.5, demo: ''}; return S.eqn; }
+const EQ_HOME = {KZ: 'Astana', KG: 'Bishkek', UZ: 'Tashkent', TJ: 'Dushanbe'};
+function eqState() { if (!S.eqn) S.eqn = {city: EQ_HOME[window.WN_HOME] || 'Almaty', r: 600, minM: 2.5, demo: ''}; return S.eqn; }
+// centre the selected city in the visible part of the map and zoom so the chosen ring fits
+function eqFly(ll) { const st = eqSite(), n = eqState(), ph = innerWidth <= 820, avW = ph ? innerWidth : innerWidth - 460, avH = ph ? innerHeight * 0.38 : innerHeight;
+  const base = Math.min(avW, avH - (ph ? 60 : 40)) * 0.44, want = Math.min(avW, avH - (ph ? 70 : 90)) * 0.40, z = want / (base * Math.sin(n.r / RE));
+  try { flyTo(ll || [st[1], st[2]], Math.max(1.2, Math.min(14, z))); } catch (e) {} }
 function eqSite() { const n = eqState(); if (n.city === 'me' && S.me) return ['My location', S.me[0], S.me[1]]; return EQ_CITIES.find(c => c[0] === n.city) || EQ_CITIES[0]; }
 // Demo scenarios placed relative to the selected city: [key, label, M, km, bearing, depth, mechanism]
 const EQ_DEMO = [['near', 'Close and shallow: jolt from below', 5.6, 40, 90, 12, 'thrust'], ['slip', 'Fault slip: horizontal shaking', 6.4, 90, 60, 15, 'strike'], ['deep', 'Distant and deep: slow swaying', 7.0, 700, 225, 200, 'deep']];
@@ -1319,9 +1325,9 @@ function eqFeel(e) { const hyp = Math.sqrt(e.km * e.km + (e.d || 10) ** 2), sp =
 function eqList() { const n = eqState(), site = eqSite(), ev = (D.eqca || []).slice(); const dm = eqDemo(); if (dm) ev.unshift(dm);
   return ev.map(e => Object.assign({}, e, {km: eqKm(site[1], site[2], e.lo, e.la)})).filter(e => e.km <= n.r && e.m >= n.minM && (e.demo || Date.now() - e.t <= 7 * 864e5)).map(e => Object.assign(e, {I: eqI(e.m, e.km, e.d)})); }
 function drawEqn(ctx, nowMs) {
-  if (!S.sel || S.sel.type !== 'eqn') return; const n = eqState(), site = eqSite(), c = P(site[1], site[2]);
+  if (!S.sel || S.sel.type !== 'eqn') return; const n = eqState(), site = eqSite(); let c;
   ctx.save(); ctx.font = '700 10px ' + MONO; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  for (const R of [300, 600, 1000]) { const on = R === n.r; ctx.lineWidth = on ? 2 : 1; ctx.setLineDash(on ? [] : [4, 5]); ctx.strokeStyle = on ? 'rgba(242,196,90,.9)' : 'rgba(217,169,60,.35)'; ctx.beginPath(); let pen = false, lab = null;
+  for (const R of [100, 300, 600, 1000]) { const on = R === n.r; ctx.lineWidth = on ? 2 : 1; ctx.setLineDash(on ? [] : [4, 5]); ctx.strokeStyle = on ? 'rgba(242,196,90,.9)' : 'rgba(217,169,60,.35)'; ctx.beginPath(); let pen = false, lab = null;
     for (let a = 0; a <= 360; a += 5) { const f1 = site[2] * RAD, d = R / RE, b = a * RAD, f2 = Math.asin(Math.sin(f1) * Math.cos(d) + Math.cos(f1) * Math.sin(d) * Math.cos(b)), l2 = site[1] * RAD + Math.atan2(Math.sin(b) * Math.sin(d) * Math.cos(f1), Math.cos(d) - Math.sin(f1) * Math.sin(f2));
       const q = P(l2 * DEG, f2 * DEG); if (!q) { pen = false; continue; } if (a === 0) lab = q; if (pen) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); pen = true; }
     ctx.stroke(); if (lab) { ctx.fillStyle = on ? '#f2c45a' : 'rgba(217,169,60,.6)'; ctx.fillText(R + ' km', lab[0], lab[1] - 8); } }
@@ -1330,7 +1336,7 @@ function drawEqn(ctx, nowMs) {
   for (const e of eqList()) { const q = P(e.lo, e.la); if (!q) continue; const r = 3 + e.m * 1.6;
     if (e.demo || nowMs - e.t < 0) { ctx.beginPath(); ctx.arc(q[0], q[1], r + k * 22, 0, 7); ctx.strokeStyle = `rgba(238,85,69,${1 - k})`; ctx.lineWidth = 2; ctx.stroke(); }
     ctx.beginPath(); ctx.arc(q[0], q[1], r, 0, 7); ctx.fillStyle = eqIcol(e.I); ctx.globalAlpha = .85; ctx.fill(); ctx.globalAlpha = 1; ctx.strokeStyle = '#0b0d12'; ctx.lineWidth = 1; ctx.stroke(); }
-  if (c) { ctx.beginPath(); ctx.arc(c[0], c[1], 9, 0, 7); ctx.strokeStyle = '#f2c45a'; ctx.lineWidth = 2; ctx.stroke(); ctx.beginPath(); ctx.arc(c[0], c[1], 4, 0, 7); ctx.fillStyle = '#f2c45a'; ctx.fill(); ctx.font = '800 11px ' + MONO; ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(wnTr(site[0]), c[0] + 13, c[1]); }
+  c = P(site[1], site[2]); if (c) { ctx.beginPath(); ctx.arc(c[0], c[1], 9, 0, 7); ctx.strokeStyle = '#f2c45a'; ctx.lineWidth = 2; ctx.stroke(); ctx.beginPath(); ctx.arc(c[0], c[1], 4, 0, 7); ctx.fillStyle = '#f2c45a'; ctx.fill(); ctx.font = '800 11px ' + MONO; ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(wnTr(site[0]), c[0] + 13, c[1]); }
   ctx.restore();
 }
 function eqSheet(body) {
@@ -1370,8 +1376,8 @@ function eqSheet(body) {
     + `<b>${wnTr('Emergency bag (тревожный чемоданчик)')}</b><div style="font-size:12px;color:var(--dim);margin-top:2px">${wnTr('A backpack packed in advance so you can leave home in one minute. Keep it by the door; check water, medicines and batteries every 6 months. Weight: up to 10–12 kg for an adult.')}</div><ul>${["Documents and copies: ID card or passport, birth certificates, medical papers; copies in a waterproof bag and photos on the phone.", "Cash in small notes and a bank card.", "Water: at least 1.5\u20132 litres per person; food for 3 days that needs no cooking (canned food, bread rolls, nuts, chocolate).", "First-aid kit and your regular medicines for 3\u20137 days, a list of medicines and allergies.", "Flashlight, spare batteries, power bank and charging cable; a small battery radio.", "Warm clothes and a change of underwear, sturdy shoes, a raincoat, a thin blanket or emergency foil blanket.", "Hygiene: wet wipes, toilet paper, soap, toothbrush, masks, garbage bags.", "Whistle, knife or multitool, matches or lighter, duct tape, a pen and notepad.", "Paper list of important phone numbers and an agreed meeting place for the family.", "For children: food, nappies, a favourite toy; for pets: food and a leash."].map(x => `<li>${wnTr(x)}</li>`).join('')}</ul></div>`;
 }
 document.addEventListener('click', e => { const b = e.target.closest('[data-eq]'); if (!b) return; const n = eqState(), [k, v] = b.dataset.eq.split(':');
-  if (k === 'city') n.city = v; else if (k === 'demo') { n.demo = v; const dm = eqDemo(); if (dm) { if (n.r < dm.d + 0 && false) {} if (eqKm(eqSite()[1], eqSite()[2], dm.lo, dm.la) > n.r) n.r = 1000; const st = eqSite(); try { flyTo([(st[1] + dm.lo) / 2, (st[2] + dm.la) / 2], n.r >= 1000 ? 3.6 : 4.8); } catch (err) {} } } else n[k] = +v;
-  if (k === 'city' || k === 'r') { const st = eqSite(); try { flyTo([st[1], st[2]], n.r <= 300 ? 5.6 : n.r <= 600 ? 4.6 : 3.8); } catch (err) {} }
+  if (k === 'city') n.city = v; else if (k === 'demo') { n.demo = v; const dm = eqDemo(); if (dm) { if (n.r < dm.d + 0 && false) {} if (eqKm(eqSite()[1], eqSite()[2], dm.lo, dm.la) > n.r) n.r = 1000; eqFly(); } } else n[k] = +v;
+  if (k === 'city' || k === 'r') eqFly();
   renderSheet(); });
 function drawMonitor(ctx, nowMs) {
   if (!(S.layers.outages || S.layers.gps || S.layers.mil)) return;
@@ -2764,6 +2770,7 @@ function renderMRail() { const el = $('mRail'); if (!el) return;
     return `<button data-mr="${k}" class="${on ? 'on' : ''}" aria-pressed="${on}"><span class="qi"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">${QI[k]}</svg></span><span class="ml">${wnTr(t)}</span>${on && c ? `<b>${shortN(c)}</b>` : ''}</button>`; }).join(''); }
 document.addEventListener('click', e => { const b = e.target.closest('#mRail [data-mr]'); if (b) qAct(b.dataset.mr); });
 function mobSync() {
+  document.body.classList.toggle('eqopen', !!(S.sel && S.sel.type === 'eqn'));
   try { renderMRail(); } catch (e) {}
   const t = S.sel && Object.keys(MTAB).find(k => MTAB[k].includes(S.sel.type));
   document.querySelectorAll('#mTabs [data-mt]').forEach(b => b.classList.toggle('on', b.dataset.mt === t));
@@ -2924,7 +2931,7 @@ $('bThreats').onclick = () => { if (S.sel && S.sel.type === 'threats') closeShee
 const NK_ON = /(^|[#&?])test\b/.test(location.hash + location.search); if (NK_ON) document.documentElement.classList.add('nkon');
 $('bTest').onclick = () => { if (S.sel && S.sel.type === 'nuke') closeSheet(); else openSel({type: 'nuke'}); };
 $('nkBanner').onclick = e => { if (e.target.closest('[data-nkx]')) nkStop(); else openSel({type: 'nuke'}); };
-$('bEqn').onclick = () => { if (S.sel && S.sel.type === 'eqn') { closeSheet(); return; } const st = eqSite(); openSel({type: 'eqn'}); try { flyTo([st[1], st[2]], 4.6); } catch (e) {} };
+$('bEqn').onclick = () => { if (S.sel && S.sel.type === 'eqn') { closeSheet(); return; } openSel({type: 'eqn'}); eqFly(); };
 $('bAbout').onclick = () => { if (S.sel && S.sel.type === 'about') closeSheet(); else openSel({type: 'about'}); };
 $('bFeedback').onclick = () => { if (S.sel && S.sel.type === 'feedback') closeSheet(); else openSel({type: 'feedback'}); };
 $('bRadar').onclick = () => { if (S.sel && S.sel.type === 'radar') closeSheet(); else openSel({type: 'radar'}); };
