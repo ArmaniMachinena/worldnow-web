@@ -977,6 +977,32 @@ def apstat(p):
     p['apair'] = {k: sorted(v)[:24] for k, v in airl.items()}
 
 
+def apnews(p, fast):
+    """Latest news (24 h, unverified media reports) for airports whose light is yellow or red: {icao: [[title, url, ts, source]]}."""
+    from concurrent.futures import ThreadPoolExecutor
+    st = fast.get('apstat') or {}
+    ap = {a[1]: a for a in (load('places.json').get('airports') or [])}
+    todo = [k for k, v in st.items() if v and v[0] in ('R', 'Y') and k in ap]
+    todo.sort(key=lambda k: (st[k][0] != 'R', ap[k][7] != 'L'))
+    todo = todo[:45]
+    def one(k):
+        a = ap[k]; name = re.sub(r'\s+International$', '', a[2]).strip()
+        q = '"' + name + '"' + (' ' + a[3] if a[3] and a[3] not in name else '') + ' when:1d'
+        try:
+            items = rss(gnews(q), limit=6)
+        except Exception:
+            return k, None
+        cut = NOW - 36 * 3600
+        return k, [[i['t'][:180], i['u'], i['ts'], i['s'][:40]] for i in items if i['ts'] >= cut][:4]
+    out = {}
+    with ThreadPoolExecutor(8) as ex:
+        for k, v in ex.map(one, todo):
+            if v:
+                out[k] = v
+    p['apnews'] = out
+    p['apnewsAt'] = int(NOW)
+
+
 def faa(p):
     """US airport delays and closures from the FAA NAS status feed."""
     x = ET.fromstring(get('https://nasstatus.faa.gov/api/airport-status-information', timeout=30))
@@ -1230,6 +1256,7 @@ def main():
     step(mid, 'outages', 30, outages)
     step(slow, 'gpsjam', 360, gpsjam)
     step(fast, 'apstat', 10, apstat)
+    step(mid, 'apnews', 30, lambda p: apnews(p, fast))
     for name, part in (('fast.json', fast), ('mid.json', mid), ('slow.json', slow), ('weather.json', wx), ('cams.json', cm), ('places.json', pl)):
         part['gen'] = int(NOW)
         save(name, part)
