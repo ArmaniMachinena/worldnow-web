@@ -176,6 +176,8 @@ def flights(p):
         alt = s[7] if s[7] is not None else s[13]
         out.append([round(lat, 4), round(lon, 4), round(s[10] or 0, 1), round(alt or 0), round(s[9] or 0, 1),
                     (s[1] or '').strip(), s[2] or '', s[0]])
+        if len(s) > 14 and s[14] in ('7500', '7600', '7700'):
+            p.setdefault('_sqk', {})[s[0]] = [round(lat, 3), round(lon, 3), (s[1] or '').strip(), s[14], round(alt or 0), s[0], s[2] or '', 'OpenSky']
     if len(out) < 500:
         raise RuntimeError(f'only {len(out)} aircraft')
     p['flights'] = out
@@ -1069,6 +1071,47 @@ def mil(p):
     p['milAt'] = int(NOW)
 
 
+SQK_NAME = {'7500': 'hijack', '7600': 'radio failure', '7700': 'emergency'}
+
+
+def sqk(p):
+    """Aircraft squawking 7500/7600/7700: OpenSky (from the flights step) plus adsb.lol."""
+    got = dict(p.pop('_sqk', {}) or {})
+    for code in ('7700', '7600', '7500'):
+        try:
+            d = jget(f'https://api.adsb.lol/v2/sqk/{code}', timeout=30)
+            for a in d.get('ac') or []:
+                if a.get('lat') is None or a.get('lon') is None: continue
+                hx = (a.get('hex') or '').lower()
+                alt = a.get('alt_baro'); alt = round(alt * 0.3048) if isinstance(alt, (int, float)) else 0
+                got[hx] = [round(a['lat'], 3), round(a['lon'], 3), (a.get('flight') or '').strip(), code, alt, hx, a.get('r') or '', 'adsb.lol', a.get('t') or '']
+        except Exception as e:
+            log(f'     sqk {code}: {type(e).__name__}')
+    p['sqk'] = list(got.values())[:60]
+    p['sqkAt'] = int(NOW)
+
+
+def who(p):
+    """WHO Disease Outbreak News, last 90 days."""
+    d = jget('https://www.who.int/api/news/diseaseoutbreaknews?sf_culture=en&$orderby=PublicationDateAndTime%20desc&$top=40', timeout=40)
+    out = []
+    for it in d.get('value') or []:
+        t = (it.get('Title') or it.get('OverrideTitle') or '').strip()
+        ts = it.get('PublicationDateAndTime') or it.get('PublicationDate') or ''
+        try:
+            tt = int(datetime.fromisoformat(ts.replace('Z', '+00:00')).timestamp())
+        except Exception:
+            continue
+        if NOW - tt > 90 * 86400: continue
+        parts = re.split(r'\s+[\u2013\u2014-]\s+', t)
+        place = parts[-1].strip() if len(parts) > 1 else ''
+        ccs = [NAME2CC[x.strip().lower()] for x in re.split(r',| and ', place) if x.strip().lower() in NAME2CC]
+        out.append([parts[0].strip(), place, tt, 'https://www.who.int/emergencies/disease-outbreak-news/item/' + (it.get('UrlName') or ''), ccs])
+    if not out: raise RuntimeError('no WHO items')
+    p['who'] = out
+    p['whoAt'] = int(NOW)
+
+
 # ---------------------------------------------------------------- live TV and markets
 STREAMS = [('aje', 'UCNye-wNBqNL5ZzHSJj3l8Bg'), ('aja', 'UCfiwzLy-8yKzIbsmZTzxDgw'), ('sky', 'UCoMdktPbSTixAyNGwb-UYkQ'), ('dw', 'UCknLrEdhRCp1aegoMqRaCZg'),
            ('f24', 'UCQfwfsi5VrQ8yKZ-UWmAEFg'), ('eun', 'UCSrZ3UV4jOidv8ppoVuvW9Q'), ('nbc', 'UCeY0bbntWzzVIaj2z3QigXg'), ('abc', 'UCBi2mrWuNuyYy4gbM6fW3Mg'),
@@ -1158,6 +1201,8 @@ def main():
     step(fast, 'flights', 5 if os.environ.get('OPENSKY_ID') else 20, flights)
     step(fast, 'quakes', 5, quakes)
     step(fast, 'eqca', 5, eqca)
+    step(fast, 'sqk', 5, sqk)
+    step(slow, 'who', 180, who)
     step(fast, 'sirens', 5, sirens)
     step(fast, 'origins', 15, origins)
     step(fast, 'radar', 10, radar)
