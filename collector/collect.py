@@ -1106,6 +1106,11 @@ def who(p):
         parts = re.split(r'\s+[\u2013\u2014-]\s+', t)
         place = parts[-1].strip() if len(parts) > 1 else ''
         ccs = [NAME2CC[x.strip().lower()] for x in re.split(r',| and ', place) if x.strip().lower() in NAME2CC]
+        if not ccs:
+            low = t.lower()
+            for nm in sorted(NAME2CC, key=len, reverse=True):
+                if len(nm) > 3 and re.search(r'\b' + re.escape(nm) + r'\b', low) and NAME2CC[nm] not in ccs:
+                    ccs.append(NAME2CC[nm]); low = low.replace(nm, ' ')
         out.append([parts[0].strip(), place, tt, 'https://www.who.int/emergencies/disease-outbreak-news/item/' + (it.get('UrlName') or ''), ccs])
     if not out: raise RuntimeError('no WHO items')
     p['who'] = out
