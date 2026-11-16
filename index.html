@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
-<script>window.WN_BUILD="20261116090552";</script>
+<script>window.WN_BUILD="20261116090718";</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>WorldNow:Emergency</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -333,14 +333,10 @@ canvas.layer{position:absolute;inset:0;width:100%;height:100%;display:block;poin
   <canvas id="base" class="layer"></canvas>
   <canvas id="globe" aria-label="Globe: drag to rotate, tap for details"></canvas>
 
-  <script>document.addEventListener('DOMContentLoaded',function(){var el=document.getElementById('wnLogo');if(!el)return;var mer=el.querySelectorAll('#wnMer ellipse'),dot=document.getElementById('wnDot'),ph=0.35,lvl=0,vel=0,raf=0,prev=0;
-/* each tap spins faster: 1-5 taps = 0.15, 0.3, 0.6, 1.2, 2.4 turns per second; the 6th tap stops the globe */
-var SPD=[0,0.15,0.3,0.6,1.2,2.4].map(function(x){return x*2*Math.PI;});
-function draw(){for(var i=0;i<mer.length;i++){var a=ph+i*Math.PI/3;mer[i].setAttribute('rx',Math.abs(Math.sin(a)*16.5).toFixed(2));}
-var d=ph+0.9;dot.setAttribute('cx',(20+Math.sin(d)*12).toFixed(2));dot.style.opacity=Math.cos(d)>0?1:0;}
-function step(t){var dt=Math.min(.1,(t-prev)/1000);prev=t;var target=SPD[lvl];vel+=(target-vel)*Math.min(1,dt*4);ph=(ph+vel*dt)%(Math.PI*2);draw();
-el.style.filter=lvl>=4?'drop-shadow(0 0 '+(lvl*1.5)+'px rgba(222,176,69,.95))':'';if(lvl>0||vel>0.002)raf=requestAnimationFrame(step);else{raf=0;vel=0;}}
-draw();el.addEventListener('click',function(){lvl=lvl>=5?0:lvl+1;el.setAttribute('title',lvl?('Скорость '+lvl+'/5'):'Стоп');if(!raf){prev=performance.now();raf=requestAnimationFrame(step);}});});</script>
+  <script>document.addEventListener('DOMContentLoaded',function(){var el=document.getElementById('wnLogo');if(!el)return;
+/* each tap on the logo spins the big globe faster (5 steps); the 6th tap stops it */
+window.WN_SPIN=0;function show(){var l=window.WN_SPIN;el.setAttribute('title',l?('Скорость '+l+'/5'):'Нажмите, чтобы закрутить глобус');el.style.filter=l?'drop-shadow(0 0 '+(2+l*1.6)+'px rgba(222,176,69,.95))':'';}
+el.addEventListener('click',function(){window.WN_SPIN=window.WN_SPIN>=5?0:window.WN_SPIN+1;show();});window.addEventListener('wn-spin-stop',function(){window.WN_SPIN=0;show();});show();});</script>
   <header id="hdr" class="panel">
     <div class="hrow">
       <div style="display:flex;align-items:center;gap:10px">
@@ -2206,7 +2202,7 @@ const endPtr = e => {
 };
 oc.addEventListener('pointerup', endPtr); oc.addEventListener('pointercancel', endPtr);
 oc.addEventListener('wheel', e => { e.preventDefault(); stopSpin(); S.zoomTarget = Math.max(ZMIN, Math.min(ZMAX, (S.zoomTarget || S.zoom) * Math.exp(-e.deltaY * 0.0016))); }, {passive: false});
-function stopSpin() { S.spin = false; $('bSpin').classList.remove('on'); }
+function stopSpin() { S.spin = false; $('bSpin').classList.remove('on'); S.spinV = 0; if (window.WN_SPIN) window.dispatchEvent(new Event('wn-spin-stop')); }
 
 function handleTap(x, y) {
   // Every candidate scores by distance / weight, so the object right under the finger wins
@@ -3059,7 +3055,8 @@ function frame(now) {
     if (Math.abs(S.vel[0]) + Math.abs(S.vel[1]) > 0.0004) {
       S.rot = [S.rot[0] + S.vel[0] * dt, Math.max(-89, Math.min(89, S.rot[1] + S.vel[1] * dt)), 0];
       const decay = Math.pow(0.94, dt / 16.7); S.vel = [S.vel[0] * decay, S.vel[1] * decay]; motion = true;
-    } else if (S.spin) { S.rot = [S.rot[0] + dt * 0.003, S.rot[1], 0]; motion = true; }
+    } else { const L = window.WN_SPIN || 0, tgt = L ? [0, 0.006, 0.015, 0.036, 0.09, 0.18][L] : S.spin ? 0.003 : 0; S.spinV = (S.spinV || 0) + (tgt - (S.spinV || 0)) * Math.min(1, dt / 350);
+      if (S.spinV > 0.0002) { S.rot = [S.rot[0] + dt * S.spinV, S.rot[1], 0]; motion = true; } else S.spinV = 0; }
   } else motion = true;
   if (S.zoomTarget) { const dz = S.zoomTarget - S.zoom; if (Math.abs(dz) > 0.002) { S.zoom += dz * Math.min(1, dt / 90); motion = true; } else { S.zoom = S.zoomTarget; S.zoomTarget = null; } }
   if (motion) S.baseDirty = true;
