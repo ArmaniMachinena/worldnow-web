@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
-<script>window.WN_BUILD="20261118205323";</script>
+<script>window.WN_BUILD="20261118211039";</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>WorldNow:Emergency</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -945,7 +945,22 @@ function hazNear(ll, km) {  // incidents, strong quakes and GDACS orange/red nea
 }
 /* What is behind an airport's light: nearby news, quakes, disasters, plus press reports about the airport itself */
 /* English headlines -> Russian/Kazakh (translated by the collector, cached in mid.json "tr") */
-function trH(s) { const L = window.WN_LANG; if (!s || (L !== 'ru' && L !== 'kk')) return s || ''; const t = D.tr && D.tr[s]; return t ? (L === 'kk' ? t[1] || t[0] : t[0] || t[1]) || s : s; }
+/* If the collector had no translation, the browser asks Google Translate itself (from the reader's own connection),
+   in small batches, and keeps the result in localStorage. */
+const TRA = new Set(), TRC = (() => { try { return JSON.parse(localStorage.getItem('wn_tr') || '{}'); } catch (e) { return {}; } })(), TRQ = new Set(); let trTimer = 0, trBusy = false;
+function trH(s) { const L = window.WN_LANG; if (!s || (L !== 'ru' && L !== 'kk')) return s || ''; if (/[А-Яа-яЁё]/.test(s)) return s;
+  const t = D.tr && D.tr[s]; if (t && (L === 'kk' ? t[1] || t[0] : t[0] || t[1])) return L === 'kk' ? t[1] || t[0] : t[0] || t[1];
+  const c = TRC[L + '|' + s]; if (c) return c; if (TRA.has(L + '|' + s)) return s; TRQ.add(s); if (!trTimer) trTimer = setTimeout(trFlush, 400); return s; }
+function trFlush() { trTimer = 0; if (trBusy || !TRQ.size) return; const L = window.WN_LANG, batch = []; let n = 0;
+  for (const s of TRQ) { if (n + s.length > 1400 || batch.length >= 25) break; batch.push(s); n += s.length + 1; }
+  batch.forEach(s => { TRQ.delete(s); TRA.add(L + '|' + s); }); trBusy = true;
+  fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=' + L + '&dt=t&q=' + encodeURIComponent(batch.map(s => s.replace(/\n/g, ' ')).join('\n')))
+    .then(r => r.json()).then(j => { const out = (j[0] || []).map(x => x && x[0] || '').join('').split('\n');
+      if (out.length === batch.length) batch.forEach((s, i) => { if (out[i].trim()) TRC[L + '|' + s] = out[i].trim(); });
+      try { const ks = Object.keys(TRC); if (ks.length > 1500) ks.slice(0, ks.length - 1200).forEach(k => delete TRC[k]); localStorage.setItem('wn_tr', JSON.stringify(TRC)); } catch (e) {}
+      trBusy = false; trRefresh(); if (TRQ.size) trTimer = setTimeout(trFlush, 300); })
+    .catch(() => { trBusy = false; }); }
+function trRefresh() { try { if (S.sel) { const b = $('shBody'), sh = b && b.closest('.sheet'), y1 = b ? b.scrollTop : 0, y2 = sh ? sh.scrollTop : 0; renderSheet(); if (b) b.scrollTop = y1; if (sh) sh.scrollTop = y2; } } catch (e) {} try { knCollect(); } catch (e) {} try { renderFeed(); } catch (e) {} }
 function apNewsHTML(a, ll) {
   const now = Date.now() + (window.WN_SKEW || 0), rows = [], km = (x, y) => Math.round(d3.geoDistance(ll, [x, y]) * 6371);
   const lnk = (u, t) => u ? `<a href="${esc(u)}" target="_blank" rel="noopener" style="color:var(--fg);text-decoration:none">${esc(t)} <span style="color:var(--gold)">↗</span></a>` : esc(t);
