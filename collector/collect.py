@@ -1003,6 +1003,58 @@ def apnews(p, fast):
     p['apnewsAt'] = int(NOW)
 
 
+def _gtx(texts, tl):
+    """Google Translate (public gtx endpoint) for a batch of short lines; returns a list of the same length or None."""
+    body = urllib.parse.urlencode({'q': '\n'.join(t.replace('\n', ' ') for t in texts)}).encode()
+    j = json.loads(get('https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=' + tl + '&dt=t', data=body,
+                       headers={'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'}, timeout=30))
+    out = ''.join(seg[0] for seg in (j[0] or []) if seg and seg[0]).split('\n')
+    return [x.strip() for x in out] if len(out) == len(texts) else None
+
+
+def trans(p, slow):
+    """Russian and Kazakh versions of English headlines shown on the map: {original: [ru, kk]}. Cached between runs."""
+    src = []
+    for x in p.get('incidents') or []:
+        src += [h[0] for h in (x[4] or []) if h and h[0]]
+    for v in (p.get('apnews') or {}).values():
+        src += [n[0] for n in v if n and n[0]]
+    src += [e.get('title') for e in (p.get('gdacs') or []) + (p.get('events') or []) if e.get('title')]
+    src += [n.get('t') for n in (p.get('news') or []) if n.get('t')]
+    src += [w[0] for w in (slow.get('who') or []) if w and w[0]]
+    old, out = p.get('tr') or {}, {}
+    todo = []
+    for t in dict.fromkeys(src):
+        if re.search('[А-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі]', t):
+            continue
+        if t in old and old[t][0] and old[t][1]:
+            out[t] = old[t]
+        else:
+            todo.append(t)
+    todo = todo[:500]
+    for tl, k in (('ru', 0), ('kk', 1)):
+        i = 0
+        while i < len(todo):
+            chunk, n = [], 0
+            while i < len(todo) and n + len(todo[i]) < 3500 and len(chunk) < 60:
+                chunk.append(todo[i]); n += len(todo[i]) + 1; i += 1
+            try:
+                r = _gtx(chunk, tl)
+            except Exception:
+                r = None
+            if r is None:   # alignment lost: one by one
+                r = []
+                for t in chunk:
+                    try:
+                        r.append((_gtx([t], tl) or [''])[0])
+                    except Exception:
+                        r.append('')
+            for t, v in zip(chunk, r):
+                out.setdefault(t, ['', ''])[k] = v
+            time.sleep(0.3)
+    p['tr'] = {t: v for t, v in out.items() if v[0] or v[1]}
+
+
 def faa(p):
     """US airport delays and closures from the FAA NAS status feed."""
     x = ET.fromstring(get('https://nasstatus.faa.gov/api/airport-status-information', timeout=30))
@@ -1257,6 +1309,7 @@ def main():
     step(slow, 'gpsjam', 360, gpsjam)
     step(fast, 'apstat', 10, apstat)
     step(mid, 'apnews', 30, lambda p: apnews(p, fast))
+    step(mid, 'trans', 10, lambda p: trans(p, slow))
     for name, part in (('fast.json', fast), ('mid.json', mid), ('slow.json', slow), ('weather.json', wx), ('cams.json', cm), ('places.json', pl)):
         part['gen'] = int(NOW)
         save(name, part)
