@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Nuclear strike in Iran · fallout scenarios · WorldNow:Emergency (experimental)</title>
+<meta name="robots" content="noindex">
+<style>
+:root{--bg:#0b0d12;--panel:#12151c;--line:#262b35;--fg:#eef0f3;--dim:#aaa69d;--gold:#f2c14e;--red:#ee5545;--org:#f98c33;--yel:#f9d64d;--grn:#4fd27a;--blu:#5ccdf2;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--gold)}
+.wrap{max-width:1180px;margin:0 auto;padding:16px 16px 60px}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.brand{font-family:var(--mono);font-weight:800;letter-spacing:.08em;color:var(--gold);font-size:13px;text-decoration:none}.brand span{color:var(--red)}
+.exp{font-family:var(--mono);font-size:10.5px;font-weight:800;letter-spacing:.08em;color:#0b0d12;background:var(--yel);border-radius:4px;padding:2px 6px}
+.lang{margin-left:auto;display:flex;gap:4px}
+button{font:inherit}
+.lang button,.seg button,.sc button{background:#1a1e27;border:1px solid var(--line);color:var(--fg);padding:7px 11px;border-radius:8px;font-size:13px;cursor:pointer}
+.lang button.on,.seg button.on,.sc button.on{border-color:var(--gold);color:var(--gold);background:rgba(242,193,78,.08)}
+h1{font-size:clamp(22px,3.4vw,32px);line-height:1.15;margin:6px 0 4px}
+.lead{color:var(--dim);max-width:860px;margin:0 0 14px}
+.warn{border:1px solid rgba(238,85,69,.6);background:rgba(238,85,69,.07);border-radius:10px;padding:10px 12px;font-size:13.5px;color:#ffcbc5;margin:10px 0 16px}
+.kick{font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin:22px 0 8px}
+.grid{display:grid;gap:12px}.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:1.45fr 1fr}
+@media(max-width:900px){.g4{grid-template-columns:repeat(2,1fr)}.g3,.g2{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.sc{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}@media(max-width:700px){.sc{grid-template-columns:1fr}}
+.sc button{text-align:left;padding:10px 12px;font-size:14px;line-height:1.3}.sc button small{display:block;color:var(--dim);font-size:12px;margin-top:3px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.ctl{display:grid;grid-template-columns:170px 1fr;gap:10px 12px;align-items:center;font-size:13.5px;margin-top:12px}
+@media(max-width:600px){.ctl{grid-template-columns:1fr}}
+.ctl input[type=range]{width:100%;accent-color:var(--gold)}
+.big{font-family:var(--mono);font-size:clamp(26px,4vw,38px);font-weight:800;line-height:1}
+.note{font-size:12.5px;color:var(--dim)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);text-align:left;font-weight:700;padding:6px;border-bottom:1px solid var(--line)}
+td{padding:7px 6px;border-bottom:1px solid #1c2029;vertical-align:middle}td.n{font-family:var(--mono);text-align:right;white-space:nowrap}
+.pill{display:inline-block;min-width:48px;text-align:center;font-family:var(--mono);font-weight:800;font-size:12px;padding:2px 6px;border-radius:5px;color:#0b0d12}
+#map{width:100%;height:auto;display:block;border-radius:8px;background:#0e1219}
+.legend{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--dim);flex-wrap:wrap;margin-top:8px}.legend i{display:inline-block;width:22px;height:10px;border-radius:2px;vertical-align:middle;margin-right:4px}
+.scr{overflow-x:auto}
+.bar{height:8px;border-radius:4px;background:#222833;overflow:hidden;margin-top:6px}.bar i{display:block;height:100%}
+ol.src{font-size:12.5px;color:var(--dim);padding-left:20px}ol.src li{margin:3px 0}
+ul.tips li{margin:4px 0}
+.play{display:flex;gap:10px;align-items:center;margin-top:10px}.play button{width:44px;height:36px;border-radius:8px;border:1px solid var(--line);background:#1a1e27;color:var(--gold);cursor:pointer}
+.play input{flex:1;accent-color:var(--gold)}.play b{font-family:var(--mono);min-width:70px;text-align:right}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><a class="brand" href="../">WORLDNOW:<span>EMERGENCY</span></a><span class="exp" data-t="exp"></span>
+  <div class="lang"><button data-l="ru">RU</button><button data-l="en">EN</button></div></header>
+<h1 data-t="title"></h1>
+<p class="lead" data-t="lead"></p>
+<div class="warn" data-t="warn"></div>
+
+<div class="kick" data-t="k_ctx"></div>
+<div class="card" id="ctx"></div>
+
+<div class="kick" data-t="k_scn"></div>
+<div class="sc" id="scn"></div>
+<div class="card" style="margin-top:10px">
+  <div class="ctl">
+    <span data-t="c_tg"></span><div class="seg" id="cTg"></div>
+    <span data-t="c_mode"></span><div class="seg" id="cMode"></div>
+    <span data-t="c_y" class="ry"></span><div class="ry"><input id="cY" type="range" min="0" max="3" step="0.01"><b id="oY" style="font-family:var(--mono);color:var(--gold)"></b></div>
+    <span data-t="c_burst" class="ry"></span><div class="seg ry" id="cBurst"></div>
+    <span data-t="c_rf" class="rr"></span><div class="seg rr" id="cRf"></div>
+    <span data-t="c_when"></span><div class="seg" id="cWhen"></div>
+    <span data-t="c_dir"></span><div class="seg" id="cDir"></div>
+  </div>
+  <div class="note" id="met" style="margin-top:10px"></div>
+</div>
+
+<div class="kick" data-t="k_res"></div>
+<div class="grid g4" id="res"></div>
+
+<div class="grid g2" style="margin-top:12px">
+  <div class="card"><svg id="map" viewBox="0 0 900 640"></svg>
+    <div class="play"><button id="bPlay">▶</button><input id="cT" type="range" min="0" max="72" step="0.5" value="24"><b id="oT"></b></div>
+    <div class="legend" id="leg"></div></div>
+  <div class="card"><div class="kick" style="margin-top:0" data-t="k_odds"></div><div id="odds"></div><div class="note" style="margin-top:8px" data-t="odds_note"></div></div>
+</div>
+
+<div class="kick" data-t="k_cities"></div>
+<div class="card scr"><table id="cities"></table><div class="note" style="margin-top:8px" data-t="cities_note"></div></div>
+
+<div class="kick" data-t="k_kz"></div>
+<div class="card scr"><div class="note" data-t="kz_note" style="margin-bottom:8px"></div><table id="kz"></table></div>
+
+<div class="kick" data-t="k_cmp"></div>
+<div class="card scr"><table id="cmp"></table></div>
+
+<div class="kick" data-t="k_do"></div>
+<div class="card"><ul class="tips" id="do"></ul></div>
+
+<div class="kick" data-t="k_how"></div>
+<div class="card note" id="how"></div>
+
+<div class="kick" data-t="k_sources"></div>
+<ol class="src" id="srcs"></ol>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<script>
+/* ======================= data ======================= */
+const RE = 6371, RAD = Math.PI / 180, DEG = 180 / Math.PI;
+const TG = [ // id, lon, lat, ru, en, Cs-137 core inventory (Bq) if an operating reactor
+  ['bushehr', 50.888, 28.83, 'Бушер (АЭС)', 'Bushehr (nuclear plant)', 2.5e17],
+  ['natanz', 51.727, 33.724, 'Натанз (обогащение)', 'Natanz (enrichment)', 0],
+  ['fordow', 50.996, 34.885, 'Фордо (обогащение в горе)', 'Fordow (enrichment in a mountain)', 0],
+  ['isfahan', 51.58, 32.68, 'Исфахан (конверсия урана)', 'Isfahan (uranium conversion)', 0],
+  ['trr', 51.385, 35.738, 'Тегеран (исслед. реактор 5 МВт)', 'Tehran (5 MW research reactor)', 2.5e17 * 5 / 3000]];
+const CITIES = [ // name ru, en, lon, lat
+  ['Тегеран', 'Tehran', 51.39, 35.69], ['Исфахан', 'Isfahan', 51.67, 32.65], ['Шираз', 'Shiraz', 52.53, 29.59], ['Бушер', 'Bushehr', 50.84, 28.97], ['Мешхед', 'Mashhad', 59.6, 36.3],
+  ['Кувейт', 'Kuwait City', 47.98, 29.37], ['Басра', 'Basra', 47.78, 30.51], ['Багдад', 'Baghdad', 44.37, 33.31], ['Эр-Рияд', 'Riyadh', 46.72, 24.71], ['Даммам', 'Dammam', 50.1, 26.43],
+  ['Манама', 'Manama', 50.58, 26.23], ['Доха', 'Doha', 51.53, 25.29], ['Дубай', 'Dubai', 55.27, 25.2], ['Абу-Даби', 'Abu Dhabi', 54.37, 24.45], ['Маскат', 'Muscat', 58.41, 23.59],
+  ['Баку', 'Baku', 49.87, 40.41], ['Ереван', 'Yerevan', 44.51, 40.18], ['Анкара', 'Ankara', 32.86, 39.93], ['Ашхабад', 'Ashgabat', 58.38, 37.95], ['Кабул', 'Kabul', 69.17, 34.53],
+  ['Карачи', 'Karachi', 67.0, 24.86], ['Ташкент', 'Tashkent', 69.24, 41.3], ['Душанбе', 'Dushanbe', 68.79, 38.56], ['Бишкек', 'Bishkek', 74.6, 42.87]];
+const KZC = [['Актау', 'Aktau', 51.17, 43.65], ['Жанаозен', 'Zhanaozen', 52.8, 43.34], ['Атырау', 'Atyrau', 51.92, 47.11], ['Уральск', 'Uralsk', 51.37, 51.23], ['Актобе', 'Aktobe', 57.21, 50.28],
+  ['Кызылорда', 'Kyzylorda', 65.51, 44.85], ['Туркестан', 'Turkistan', 68.25, 43.3], ['Шымкент', 'Shymkent', 69.59, 42.32], ['Тараз', 'Taraz', 71.37, 42.9], ['Алматы', 'Almaty', 76.95, 43.24],
+  ['Астана', 'Astana', 71.43, 51.13], ['Караганда', 'Karaganda', 73.1, 49.8]];
+const REGIONS = [ // ru, en, lon, lat (centre the cloud would head for)
+  ['Страны Персидского залива', 'Gulf states', 50.5, 25.5], ['Ирак, Сирия, Турция', 'Iraq, Syria, Türkiye', 42, 35], ['Кавказ и Каспий', 'Caucasus and the Caspian', 48, 41.5],
+  ['Туркменистан, Узбекистан, Казахстан', 'Turkmenistan, Uzbekistan, Kazakhstan', 62, 43], ['Афганистан, Пакистан, Индия', 'Afghanistan, Pakistan, India', 68, 30], ['Оман и Аравийское море', 'Oman and the Arabian Sea', 58, 21]];
+const PRESETS = {
+  rx10: {tg: 'bushehr', mode: 'reactor', rf: 0.1, y: 0.1, burst: 'ground'},
+  rx30: {tg: 'bushehr', mode: 'reactor', rf: 0.3, y: 0.1, burst: 'ground'},
+  both: {tg: 'bushehr', mode: 'both', rf: 0.3, y: 0.1, burst: 'ground'},
+  tac:  {tg: 'fordow', mode: 'burst', rf: 0.1, y: 0.015, burst: 'ground'},
+  big:  {tg: 'natanz', mode: 'burst', rf: 0.1, y: 0.3, burst: 'ground'},
+  air:  {tg: 'isfahan', mode: 'burst', rf: 0.1, y: 0.1, burst: 'air'}};
+const ST = Object.assign({preset: 'rx10', when: 'now', dir: 'live', t: 24, play: false}, PRESETS.rx10);
+const LV_A = [[1, '#f9d64d'], [10, '#f98c33'], [100, '#e2463b'], [1000, '#8b0a1a']];     // R/h at H+1
+const LV_R = [[37, '#f9d64d'], [185, '#f98c33'], [555, '#e2463b'], [1480, '#8b0a1a']];   // kBq/m² Cs-137
+const SIG = {A: x => [0.22 * x / Math.sqrt(1 + 1e-4 * x), 0.2 * x], B: x => [0.16 * x / Math.sqrt(1 + 1e-4 * x), 0.12 * x], C: x => [0.11 * x / Math.sqrt(1 + 1e-4 * x), 0.08 * x / Math.sqrt(1 + 2e-4 * x)],
+  D: x => [0.08 * x / Math.sqrt(1 + 1e-4 * x), 0.06 * x / Math.sqrt(1 + 1.5e-3 * x)], E: x => [0.06 * x / Math.sqrt(1 + 1e-4 * x), 0.03 * x / (1 + 3e-4 * x)], F: x => [0.04 * x / Math.sqrt(1 + 1e-4 * x), 0.016 * x / (1 + 3e-4 * x)]};
+
+/* ======================= texts ======================= */
+const TX = {
+ru: {exp: 'ЭКСПЕРИМЕНТ', title: 'Ядерный удар или удар по реактору в Иране: сценарии и радиоактивное облако',
+ lead: 'Экспериментальная модель: что будет при ударе ракетой по ядерному реактору, при ядерном взрыве на ядерном объекте или при обоих сразу. Куда пойдёт облако по реальному прогнозу ветра, какие страны и города оно накроет и насколько это опасно для Казахстана.',
+ warn: 'Это учебная модель на открытых формулах, а не прогноз и не реальное событие. Ядерное оружие в 2026 году никто не применял. Реальные последствия зависят от высоты взрыва, того, что именно поражено, дождя и рельефа. Не пересылайте скриншоты как новость.',
+ k_ctx: 'Почему именно эти цели', k_scn: 'Сценарий', k_res: 'Результат', k_odds: 'Куда может пойти облако в ближайшие 7 дней', k_cities: 'Города: накроет ли и когда', k_kz: 'Казахстан: худший случай',
+ k_cmp: 'Для сравнения', k_do: 'Что делать, если облако идёт к вам', k_how: 'Как считается', k_sources: 'Источники',
+ sc: {rx10: ['Ракета по Бушеру', 'Разрушено здание реактора, пожар, выброс 10% активной зоны'], rx30: ['Бушер как Чернобыль', 'Выброс 30% активной зоны — худший реалистичный случай'],
+  both: ['Ядерный заряд по Бушеру', '100 кт наземный взрыв + выброс реактора'], tac: ['Тактический заряд по Фордо', '15 кт (как Хиросима), наземный взрыв'],
+  big: ['Мощный заряд по Натанзу', '300 кт, наземный взрыв'], air: ['Воздушный взрыв над Исфаханом', '100 кт на высоте — почти без местных осадков']},
+ c_tg: 'Цель', c_mode: 'Что происходит', c_y: 'Мощность заряда', c_burst: 'Взрыв', c_rf: 'Выброс из реактора', c_when: 'Погода', c_dir: 'Ветер',
+ modes: {reactor: 'Удар по реактору (без ядерного взрыва)', both: 'Ядерный взрыв на реакторе', burst: 'Ядерный взрыв'}, bursts: {ground: 'Наземный: сильные осадки', air: 'Воздушный: мало осадков'},
+ whens: {now: 'Сейчас', day: 'Ближайший день, 13:00', night: 'Ближайшая ночь, 01:00'}, dirLive: 'По прогнозу', dirKZ: 'Худший: на Казахстан',
+ met: (m) => `${m.src === 'open-meteo' ? 'Прогноз Open-Meteo' : 'Прогноз недоступен — типичный ветер'} · ${m.time ? m.time.replace('T', ' ') + ' (местное время)' : ''} · ${m.isDay ? 'день' : 'ночь'} · облачность ${Math.round(m.cloud)}% · ветер у земли ${Math.round(m.lv[0][1] * 3.6)} км/ч, на 5,5 км ${Math.round(m.lv[3][1] * 3.6)} км/ч · класс устойчивости ${m.cls}${m.rain > 0 ? ' · дождь' : ''}`,
+ r_dir: 'облако идёт на', r_far: 'дальность опасной зоны', r_far_r: 'загрязнение ≥37 кБк/м² (по нормам Чернобыля)', r_far_a: '≥1 Р/ч через час (укрытие обязательно)',
+ r_blast: 'радиус разрушений (5 psi)', r_fire: 'ожоги 3-й степени', r_cty: 'стран в зоне загрязнения', r_none: 'местных осадков почти нет',
+ th_city: 'Город', th_km: 'Расстояние', th_hit: 'В зоне', th_when: 'Через', th_val: 'Уровень', th_what: 'Что это значит',
+ hit_y: 'да', hit_n: 'нет', h: 'ч',
+ cities_note: 'При выбранной погоде. Если ветер другой — смотрите блок «Куда может пойти облако» и сценарий «Худший: на Казахстан».',
+ kz_note: 'Худший случай: сильный ветер дует прямо от цели на город, без дождя. Для удара по реактору — цезий-137 на земле и доза за первый год; для ядерного взрыва — доза за первые 48 часов на открытом воздухе без укрытия.',
+ odds_note: 'Доля часов в ближайшие 7 дней, когда ветер на высоте 1,5–5,5 км несёт облако от цели в сторону региона. Остальное время ветер дует в другие стороны.',
+ cat_r: d => d >= 1480 ? 'Зона отчуждения (Чернобыль: обязательное выселение)' : d >= 555 ? 'Зона отселения' : d >= 185 ? 'Строгий контроль еды и воды' : d >= 37 ? 'Загрязнённая территория' : 'Ниже порога загрязнения',
+ cat_a: d => d >= 1000 ? 'Смертельно за часы без укрытия' : d >= 100 ? 'Тяжёлая лучевая болезнь без укрытия' : d >= 10 ? 'Укрыться в помещении, не выходить' : d >= 1 ? 'Оставаться дома 1–2 дня' : 'Слабый след',
+ cat_kz: d => d >= 100 ? 'Лучевая болезнь вероятна без укрытия' : d >= 10 ? 'Повышенная доза: укрытие, йод — по указанию властей' : d >= 1 ? 'Заметная доза: 1–2 дня дома' : d >= 0.1 ? 'Малая доза: закрыть окна' : 'Практически безопасно',
+ cmp_h: ['Событие', 'Что', 'Выброс / мощность', 'Зона загрязнения', 'Последствия'],
+ cmp: [['Хиросима, 1945', 'воздушный взрыв', '15 кт', 'местных осадков мало', '~70–140 тыс. погибших, в основном от взрыва и огня'],
+  ['Castle Bravo, 1954', 'наземный взрыв', '15 Мт', 'опасный след ~500 км', 'облучены жители атоллов и японские рыбаки'],
+  ['Чернобыль, 1986', 'авария реактора', '~30% цезия активной зоны', '>1480 кБк/м² до ~30–60 км, загрязнение до 2000 км', 'эвакуировано ~350 тыс., зона отчуждения 2600 км²'],
+  ['Фукусима, 2011', 'авария 3 реакторов', '~2–3% цезия', 'загрязнение до ~50 км на северо-запад', 'эвакуировано ~150 тыс.'],
+  ['Бушер, 2026', '4 удара рядом со станцией', 'без выброса', '—', 'МАГАТЭ: роста радиации нет, один погибший сотрудник']],
+ do: ['Зайдите в здание и оставайтесь внутри: подвал или середина многоэтажного дома снижает дозу в 10–100 раз. Первые 24–48 часов — самые опасные.',
+  'Закройте окна, двери, выключите вентиляцию и кондиционер. Если были на улице — снимите верхнюю одежду в пакет, примите душ.',
+  'Пейте бутилированную воду, ешьте продукты из закрытых упаковок. Не собирайте урожай, не пейте молоко местных коров первые недели.',
+  'Таблетки йодида калия — только по указанию властей и только при угрозе радиоактивного йода (удар по реактору). От цезия и от взрыва они не защищают.',
+  'Слушайте официальные сообщения МЧС и минздрава. Не уезжайте навстречу облаку: часто безопаснее переждать в укрытии, чем ехать под осадками.'],
+ how: `<p><b>Удар по реактору.</b> Гауссов шлейф с осаждением цезия-137 на землю. Запас цезия в активной зоне Бушера (ВВЭР-1000) оценён по Чернобылю (~2,5·10¹⁷ Бк). 40% выброса — у земли (~100 м), 60% поднимает пожар до ~1 км. Рассеяние — сигмы Бриггса для класса устойчивости Паскуилла–Гиффорда (зависит от дня/ночи, ветра и облачности), боковое расширение не меньше 8% расстояния, слой перемешивания 1,5 км, скорость осаждения 3 мм/с (10 мм/с в дождь). Направление — ветер на ~1,5 км из прогноза.</p>
+ <p><b>Ядерный взрыв.</b> Эллипсы радиоактивного следа по Глесстону и Долану («The Effects of Nuclear Weapons», 1977): длина и ширина зон 1/10/100/1000 Р/ч через час масштабируются с мощностью и средним ветром по высоте облака (верх облака ≈ 2 + 9·Y<sup>0,3</sup> км). Доза снижается со временем примерно как t<sup>−1,2</sup>. Радиусы: огненный шар ≈ 0,075·кт<sup>0,4</sup> км, 5 psi ≈ 0,36·кт<sup>1/3</sup> км, ожоги 3-й степени ≈ 0,6·кт<sup>0,41</sup> км. Воздушный взрыв почти не даёт местных осадков.</p>
+ <p><b>Ветер и вероятности.</b> Почасовой прогноз Open-Meteo на 7 дней в точке цели: ветер у земли и на уровнях 850/700/500/300 гПа. Для каждого часа берётся направление переноса и сравнивается с направлением на регион (±30°).</p>
+ <p>Не учтено: рельеф, точная высота взрыва, пожары после взрыва, дождевые «пятна», бассейн с отработанным топливом (может удвоить выброс).</p>`,
+ ctx: `<p><b>Бушер</b> — единственная работающая АЭС Ирана (реактор 1000 МВт, побережье Персидского залива, город около 250 тыс. жителей). В марте–апреле 2026 года снаряды четыре раза попадали на территорию станции или рядом; один разрушил постройку примерно в 350 м от реактора, погиб сотрудник. Глава МАГАТЭ предупредил, что прямое попадание в работающий реактор может пересечь «самую красную черту» ядерной безопасности.</p>
+ <p><b>Натанз, Фордо, Исфахан</b> — заводы по обогащению и конверсии урана, по которым били обычными боеприпасами. Реакторов там нет: без ядерного взрыва опасность местная (уран и химикаты на несколько километров). Ядерный заряд против подземных залов Фордо и Натанза обсуждается в открытых источниках как гипотетический.</p>`,
+ src_as: 'Обстановка на 19 ноября 2026'},
+en: {exp: 'EXPERIMENTAL', title: 'Nuclear strike or strike on a reactor in Iran: scenarios and the radioactive cloud',
+ lead: 'Experimental model: what happens if a missile hits a nuclear reactor, if a nuclear weapon explodes on a nuclear site, or both. Where the cloud goes on the real wind forecast, which countries and cities it covers, and how dangerous it is for Kazakhstan.',
+ warn: 'This is an educational model built on open formulas, not a forecast and not a real event. No one used nuclear weapons in 2026. Real effects depend on burst height, what exactly is hit, rain and terrain. Do not share screenshots as news.',
+ k_ctx: 'Why these targets', k_scn: 'Scenario', k_res: 'Result', k_odds: 'Where the cloud could go over the next 7 days', k_cities: 'Cities: covered or not, and when', k_kz: 'Kazakhstan: worst case',
+ k_cmp: 'For comparison', k_do: 'What to do if the cloud is heading your way', k_how: 'How it is calculated', k_sources: 'Sources',
+ sc: {rx10: ['Missile hits Bushehr', 'Reactor building destroyed, fire, 10% of the core released'], rx30: ['Bushehr like Chernobyl', '30% of the core released — the worst realistic case'],
+  both: ['Nuclear warhead on Bushehr', '100 kt ground burst + reactor release'], tac: ['Tactical weapon on Fordow', '15 kt (Hiroshima-size), ground burst'],
+  big: ['Large weapon on Natanz', '300 kt, ground burst'], air: ['Air burst over Isfahan', '100 kt at altitude — almost no local fallout']},
+ c_tg: 'Target', c_mode: 'What happens', c_y: 'Yield', c_burst: 'Burst', c_rf: 'Reactor release', c_when: 'Weather', c_dir: 'Wind',
+ modes: {reactor: 'Strike on the reactor (no nuclear explosion)', both: 'Nuclear explosion on the reactor', burst: 'Nuclear explosion'}, bursts: {ground: 'Ground: heavy fallout', air: 'Air: little fallout'},
+ whens: {now: 'Now', day: 'Nearest day, 13:00', night: 'Nearest night, 01:00'}, dirLive: 'Forecast', dirKZ: 'Worst: toward Kazakhstan',
+ met: (m) => `${m.src === 'open-meteo' ? 'Open-Meteo forecast' : 'Forecast unavailable — typical wind'} · ${m.time ? m.time.replace('T', ' ') + ' (local time)' : ''} · ${m.isDay ? 'day' : 'night'} · cloud ${Math.round(m.cloud)}% · surface wind ${Math.round(m.lv[0][1] * 3.6)} km/h, at 5.5 km ${Math.round(m.lv[3][1] * 3.6)} km/h · stability class ${m.cls}${m.rain > 0 ? ' · rain' : ''}`,
+ r_dir: 'the cloud heads', r_far: 'reach of the danger zone', r_far_r: 'contamination ≥37 kBq/m² (Chernobyl definition)', r_far_a: '≥1 R/h after one hour (shelter required)',
+ r_blast: 'destruction radius (5 psi)', r_fire: 'third-degree burns', r_cty: 'countries in the contaminated zone', r_none: 'almost no local fallout',
+ th_city: 'City', th_km: 'Distance', th_hit: 'In zone', th_when: 'After', th_val: 'Level', th_what: 'What it means',
+ hit_y: 'yes', hit_n: 'no', h: 'h',
+ cities_note: 'For the selected weather. With another wind, see "Where the cloud could go" and the "Worst: toward Kazakhstan" option.',
+ kz_note: 'Worst case: a strong wind blows straight from the target to the city, no rain. For a reactor strike: caesium-137 on the ground and the first-year dose; for a nuclear explosion: the dose over the first 48 hours outdoors without shelter.',
+ odds_note: 'Share of hours over the next 7 days when the wind at 1.5–5.5 km carries the cloud from the target toward the region. The rest of the time it blows elsewhere.',
+ cat_r: d => d >= 1480 ? 'Exclusion zone (Chernobyl: compulsory evacuation)' : d >= 555 ? 'Resettlement zone' : d >= 185 ? 'Strict food and water control' : d >= 37 ? 'Contaminated area' : 'Below the contamination threshold',
+ cat_a: d => d >= 1000 ? 'Lethal within hours without shelter' : d >= 100 ? 'Severe radiation sickness without shelter' : d >= 10 ? 'Shelter indoors, do not go out' : d >= 1 ? 'Stay indoors 1–2 days' : 'Faint trace',
+ cat_kz: d => d >= 100 ? 'Radiation sickness likely without shelter' : d >= 10 ? 'Elevated dose: shelter, iodine on official advice' : d >= 1 ? 'Measurable dose: 1–2 days indoors' : d >= 0.1 ? 'Small dose: close windows' : 'Practically safe',
+ cmp_h: ['Event', 'What', 'Release / yield', 'Contaminated zone', 'Consequences'],
+ cmp: [['Hiroshima, 1945', 'air burst', '15 kt', 'little local fallout', '~70–140k dead, mostly blast and fire'],
+  ['Castle Bravo, 1954', 'ground burst', '15 Mt', 'dangerous trace ~500 km', 'atoll residents and Japanese fishermen irradiated'],
+  ['Chernobyl, 1986', 'reactor accident', '~30% of core caesium', '>1480 kBq/m² to ~30–60 km, contamination to 2000 km', '~350k evacuated, 2600 km² exclusion zone'],
+  ['Fukushima, 2011', 'accident at 3 reactors', '~2–3% of caesium', 'contamination to ~50 km north-west', '~150k evacuated'],
+  ['Bushehr, 2026', '4 strikes near the plant', 'no release', '—', 'IAEA: no rise in radiation, one staff member killed']],
+ do: ['Get inside a building and stay there: a basement or the middle of a multi-storey building cuts the dose 10–100 times. The first 24–48 hours are the most dangerous.',
+  'Close windows and doors, switch off ventilation and air conditioning. If you were outside, bag your outer clothes and shower.',
+  'Drink bottled water, eat sealed food. Do not harvest crops or drink milk from local cows for the first weeks.',
+  'Potassium iodide tablets only on official advice and only against radioactive iodine (reactor strike). They do not protect against caesium or the blast.',
+  'Follow official emergency and health ministry messages. Do not drive toward the cloud: sheltering is often safer than travelling under fallout.'],
+ how: `<p><b>Reactor strike.</b> Gaussian plume with ground deposition of caesium-137. Bushehr's (VVER-1000) core inventory is scaled from Chernobyl (~2.5·10¹⁷ Bq). 40% of the release stays near the ground (~100 m), 60% is lifted by the fire to ~1 km. Dispersion uses Briggs sigmas for the Pasquill–Gifford stability class (set by day/night, wind and cloud), lateral spread at least 8% of distance, a 1.5 km mixing layer, deposition velocity 3 mm/s (10 mm/s in rain). Direction: forecast wind at ~1.5 km.</p>
+ <p><b>Nuclear explosion.</b> Fallout ellipses after Glasstone & Dolan (The Effects of Nuclear Weapons, 1977): length and width of the 1/10/100/1000 R/h (at H+1) zones scale with yield and the mean wind through the cloud (cloud top ≈ 2 + 9·Y<sup>0.3</sup> km). Dose rate falls roughly as t<sup>−1.2</sup>. Radii: fireball ≈ 0.075·kt<sup>0.4</sup> km, 5 psi ≈ 0.36·kt<sup>1/3</sup> km, third-degree burns ≈ 0.6·kt<sup>0.41</sup> km. An air burst leaves almost no local fallout.</p>
+ <p><b>Wind and odds.</b> Hourly Open-Meteo forecast for 7 days at the target: surface wind and 850/700/500/300 hPa levels. For each hour the transport direction is compared with the bearing to each region (±30°).</p>
+ <p>Not included: terrain, exact burst height, fires after the blast, rain hot spots, the spent-fuel pool (could double the release).</p>`,
+ ctx: `<p><b>Bushehr</b> is Iran's only operating nuclear power plant (1000 MW reactor on the Gulf coast, a city of about 250,000). In March–April 2026 projectiles struck its grounds or nearby four times; one destroyed a structure about 350 m from the reactor, and a staff member was killed. The IAEA chief warned that a direct hit on an operating reactor could cross the "reddest line" of nuclear safety.</p>
+ <p><b>Natanz, Fordow, Isfahan</b> are enrichment and conversion plants struck with conventional weapons. They hold no reactor: without a nuclear explosion the danger is local (uranium and chemicals over a few kilometres). A nuclear weapon against the underground halls of Fordow and Natanz is discussed in open sources only as a hypothetical.</p>`,
+ src_as: 'Situation as of 19 November 2026'}};
+const SOURCES = [
+ ['IAEA chief: strike on Bushehr risks crossing the "reddest line" — NucNet, 19 Mar 2026', 'https://www.nucnet.org/news/projectile-has-hit-premises-of-bushehr-nuclear-power-station-in-iran-iaea-says-3-4-2026'],
+ ['UN News: IAEA chief "deeply concerned" by fourth strike near Bushehr, 4 Apr 2026', 'https://news.un.org/en/story/2026/04/1167250'],
+ ['IAEA event report: projectile struck the premises of Bushehr NPP, 24 Mar 2026', 'https://www-news.iaea.org/ErfView.aspx?mId=e2f5b755-2113-4b04-8a7f-79156fff547e'],
+ ['Wikipedia — Bushehr Nuclear Power Plant', 'https://en.wikipedia.org/wiki/Bushehr_Nuclear_Power_Plant'],
+ ['Glasstone & Dolan — The Effects of Nuclear Weapons (1977), ch. 9 fallout', 'https://www.fourmilab.ch/etexts/www/effects/'],
+ ['IAEA — The Chernobyl Forum: Chernobyl’s Legacy (2006)', 'https://www.iaea.org/sites/default/files/chernobyl.pdf'],
+ ['UNSCEAR 2008 Annex D — Health effects due to radiation from the Chernobyl accident', 'https://www.unscear.org/unscear/en/publications/2008_2.html'],
+ ['US EPA — Radiological emergency: sheltering in place', 'https://www.epa.gov/radiation/radiation-emergencies'],
+ ['WHO — Iodine thyroid blocking guidelines (2017)', 'https://www.who.int/publications/i/item/9789241550185'],
+ ['Open-Meteo — weather forecast API (winds on pressure levels)', 'https://open-meteo.com/en/docs']];
+
+/* ======================= model ======================= */
+let lang = (() => { try { const l = localStorage.getItem('wn_lang'); return l === 'ru' || l === 'kk' ? 'ru' : l ? 'en' : /^(ru|kk)/.test(navigator.language || '') ? 'ru' : 'en'; } catch (e) { return 'ru'; } })();
+const T = k => TX[lang][k], nm = a => lang === 'ru' ? a[0] : a[1];
+const MET = {};
+function dest(lon, lat, brg, km) { const d = km / RE, b = brg * RAD, f1 = lat * RAD, l1 = lon * RAD, f2 = Math.asin(Math.sin(f1) * Math.cos(d) + Math.cos(f1) * Math.sin(d) * Math.cos(b));
+  return [(l1 + Math.atan2(Math.sin(b) * Math.sin(d) * Math.cos(f1), Math.cos(d) - Math.sin(f1) * Math.sin(f2))) * DEG, f2 * DEG]; }
+function brgOf(a, b, c, d) { const f1 = b * RAD, f2 = d * RAD, dl = (c - a) * RAD; return (Math.atan2(Math.sin(dl) * Math.cos(f2), Math.cos(f1) * Math.sin(f2) - Math.sin(f1) * Math.cos(f2) * Math.cos(dl)) * DEG + 360) % 360; }
+function kmOf(a, b, c, d) { const f1 = b * RAD, f2 = d * RAD, x = Math.sin((f2 - f1) / 2) ** 2 + Math.cos(f1) * Math.cos(f2) * Math.sin((c - a) * RAD / 2) ** 2; return 2 * RE * Math.asin(Math.sqrt(x)); }
+const cmp8 = d => (lang === 'ru' ? ['С', 'СВ', 'В', 'ЮВ', 'Ю', 'ЮЗ', 'З', 'СЗ'] : ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'])[Math.round(((d % 360) + 360) % 360 / 45) % 8];
+function fetchMet(tg) { if (MET[tg]) return; const t = TG.find(x => x[0] === tg); MET[tg] = {loading: 1};
+  const lv = [850, 700, 500, 300].flatMap(p => [`wind_speed_${p}hPa`, `wind_direction_${p}hPa`]).join(',');
+  fetch(`https://api.open-meteo.com/v1/forecast?latitude=${t[2]}&longitude=${t[1]}&hourly=wind_speed_10m,wind_direction_10m,${lv},cloud_cover,is_day,precipitation&wind_speed_unit=ms&forecast_days=7&timezone=auto`)
+    .then(r => r.json()).then(j => { MET[tg] = j.hourly ? {h: j.hourly, off: (j.utc_offset_seconds || 0) * 1000} : {err: 1}; render(); }).catch(() => { MET[tg] = {err: 1}; render(); }); }
+function met() { const m = MET[ST.tg];
+  if (!m || !m.h) return {src: 'approx', time: '', isDay: ST.when !== 'night', cloud: 30, rain: 0, lv: [[0.01, 4, 300], [1.5, 7, 290], [3, 12, 275], [5.6, 20, 265], [9.2, 28, 265]], h: null};
+  const h = m.h, Ts = h.time, now = Date.now(); let i = Math.max(0, Ts.findIndex((t, k) => k + 1 >= Ts.length || Date.parse(Ts[k + 1] + 'Z') - (m.off || 0) > now));
+  if (ST.when !== 'now') { const want = ST.when === 'day' ? 13 : 1; for (let k = i; k < Ts.length; k++) if (+Ts[k].slice(11, 13) === want) { i = k; break; } }
+  const g = k => h[k] ? h[k][i] : null, lv = [[0.01, g('wind_speed_10m'), g('wind_direction_10m')]];
+  for (const [p, hk] of [[850, 1.5], [700, 3], [500, 5.6], [300, 9.2]]) lv.push([hk, g(`wind_speed_${p}hPa`), g(`wind_direction_${p}hPa`)]);
+  for (const l of lv) { if (l[1] == null) l[1] = 5; if (l[2] == null) l[2] = 270; }
+  return {src: 'open-meteo', time: Ts[i], isDay: !!g('is_day'), cloud: g('cloud_cover') || 0, rain: g('precipitation') || 0, lv, h}; }
+function windAt(lv, hkm) { let a = lv[0], b = lv[lv.length - 1]; for (let k = 0; k < lv.length - 1; k++) if (hkm >= lv[k][0] && hkm <= lv[k + 1][0]) { a = lv[k]; b = lv[k + 1]; break; }
+  if (hkm > lv[lv.length - 1][0]) a = b; const f = a === b ? 0 : (hkm - a[0]) / (b[0] - a[0]);
+  const vx = (1 - f) * -Math.sin(a[2] * RAD) * a[1] + f * -Math.sin(b[2] * RAD) * b[1], vy = (1 - f) * -Math.cos(a[2] * RAD) * a[1] + f * -Math.cos(b[2] * RAD) * b[1];
+  return {ms: Math.hypot(vx, vy), to: (Math.atan2(vx, vy) * DEG + 360) % 360}; }
+function stab(m) { const u = m.lv[0][1], clear = m.cloud < 50;
+  if (m.isDay) return u < 2 ? (clear ? 'A' : 'B') : u < 5 ? (clear ? 'B' : 'C') : (clear ? 'C' : 'D');
+  return u < 3 ? (clear ? 'F' : 'E') : u < 5 ? (clear ? 'E' : 'D') : 'D'; }
+function params() { const tg = TG.find(x => x[0] === ST.tg), m = met(); let lv = m.lv.map(l => l.slice()); m.cls = stab(m);
+  let forced = null; if (ST.dir === 'kz') { const az = brgOf(tg[1], tg[2], 62, 45); forced = az; lv = lv.map(l => [l[0], Math.max(l[1], 12), (az + 180) % 360]); }
+  const Y = ST.y, top = 2 + 9 * Math.pow(Y, 0.3); let vx = 0, vy = 0;
+  for (let k = 0; k <= 10; k++) { const w = windAt(lv, top * k / 10); vx += Math.sin(w.to * RAD) * w.ms; vy += Math.cos(w.to * RAD) * w.ms; }
+  vx /= 11; vy /= 11; const rw = windAt(lv, 1.5), burstOn = ST.mode !== 'reactor', ground = burstOn && ST.burst === 'ground';
+  const rx = ST.mode !== 'burst' && tg[5] ? tg[5] * ST.rf * (ST.mode === 'both' ? 1.5 : 1) : 0;
+  return {tg, lon: tg[1], lat: tg[2], m, lv, Y, top, cls: m.cls, effTo: (Math.atan2(vx, vy) * DEG + 360) % 360, effKmh: Math.max(8, Math.hypot(vx, vy) * 3.6),
+    rTo: rw.to, rMs: Math.max(3, rw.ms), burstOn, ground, rx, rain: m.rain > 0, forced}; }
+// Glasstone–Dolan fallout ellipse dims (km) for the H+1 dose-rate level
+function adim(p, lvl) { return {L: 257 * Math.pow(p.Y, 0.45) * Math.pow(p.effKmh / 24, 0.5) * Math.pow(lvl / 100, -0.53), W: 19 * Math.pow(p.Y, 0.4) * Math.pow(24 / p.effKmh, 0.25) * Math.pow(lvl / 100, -0.45)}; }
+function polyA(p, lvl, front) { const {L, W} = adim(p, lvl), U = Math.min(0.3 * W, 0.01 * L), Lc = Math.min(L, front), a = [], b = [];
+  for (let i = 0; i <= 40; i++) { const s = -U + (Lc + U) * i / 40, hw = W / 2 * Math.pow(Math.max(0, Math.sin(Math.PI * Math.min(1, (s + U) / (L + U)))), 0.7);
+    const c = s >= 0 ? dest(p.lon, p.lat, p.effTo, s) : dest(p.lon, p.lat, p.effTo + 180, -s); a.push(dest(c[0], c[1], p.effTo + 90, hw)); b.push(dest(c[0], c[1], p.effTo - 90, hw)); }
+  return a.concat(b.reverse()); }
+function levelA(p, km, brg) { const d = ((brg - p.effTo + 540) % 360) - 180, s = km * Math.cos(d * RAD), y = Math.abs(km * Math.sin(d * RAD)); let best = 0;
+  for (const [lvl] of LV_A) { const {L, W} = adim(p, lvl); if (s >= 0 && s <= L && y <= W / 2 * Math.pow(Math.sin(Math.PI * s / L), 0.7)) best = lvl; }
+  if (!best && s > 0) { const L1 = adim(p, 1).L; if (s > L1 && y < adim(p, 1).W) best = Math.pow(s / L1, -1 / 0.53); }   // beyond the 1 R/h tip: extrapolate along the axis
+  return {lvl: best, s}; }
+// reactor deposition (kBq/m² Cs-137)
+function rxDep(p, xm, ym) { if (!p.rx || xm < 50) return 0; const g = SIG[p.cls] || SIG.D, sg = g(xm).slice(); if (xm > 1e5) sg[1] = Math.max(sg[1], SIG.D(xm)[1]); // beyond ~100 km the day–night cycle mixes the layer
+  const sy = Math.max(sg[0], 0.08 * xm), Lm = 1500, u = p.rMs, vd = p.rain ? 0.01 : 0.003;
+  const dep = Math.exp(-vd * xm / (u * Lm)), lat = Math.exp(-ym * ym / (2 * sy * sy)); let chi = 0;
+  for (const [f, Hs] of [[0.4, 100], [0.6, 1000]]) chi += f * (sg[1] < Lm ? p.rx / (Math.PI * sy * sg[1] * u) * Math.exp(-Hs * Hs / (2 * sg[1] * sg[1])) : p.rx / (Math.sqrt(2 * Math.PI) * sy * Lm * u));
+  return chi * vd * dep * lat / 1000; }
+function polyR(p, lvl, frontKm) { const a = [], b = []; let peak = 0;
+  for (let i = 0; i <= 116; i++) { const x = 500 * Math.pow(1.085, i); if (x / 1000 > Math.min(frontKm, 4500)) break; const c = rxDep(p, x, 0); if (c < lvl) { if (peak) break; continue; } peak = 1;
+    const g = SIG[p.cls] || SIG.D, sy = Math.max(g(x)[0], 0.08 * x), hw = sy * Math.sqrt(2 * Math.log(c / lvl)) / 1000, m = dest(p.lon, p.lat, p.rTo, x / 1000);
+    a.push(dest(m[0], m[1], p.rTo + 90, hw)); b.push(dest(m[0], m[1], p.rTo - 90, hw)); }
+  return a.length > 1 ? [[p.lon, p.lat]].concat(a, b.reverse()) : null; }
+function reach(pl) { let far = 0; if (pl) for (const q of pl) far = Math.max(far, kmOf(ST.lonlat[0], ST.lonlat[1], q[0], q[1])); return far; }
+function radii(p) { const kt = p.Y * 1000; return {fire: 0.075 * Math.pow(kt, 0.4), blast: (p.ground ? 0.36 : 0.46) * Math.pow(kt, 1 / 3), burn: 0.6 * Math.pow(kt, 0.41)}; }
+function regionOdds(p) { const m = MET[ST.tg]; const out = REGIONS.map(r => ({r, az: brgOf(p.lon, p.lat, r[2], r[3]), n: 0})); let tot = 0;
+  if (!m || !m.h) return null;
+  const h = m.h; for (let i = 0; i < h.time.length; i++) { const lv = [[1.5, h.wind_speed_850hPa[i], h.wind_direction_850hPa[i]], [5.6, h.wind_speed_500hPa[i], h.wind_direction_500hPa[i]]];
+    if (lv.some(l => l[1] == null || l[2] == null)) continue; tot++; let vx = 0, vy = 0; for (const l of lv) { const to = (l[2] + 180) % 360; vx += Math.sin(to * RAD) * l[1]; vy += Math.cos(to * RAD) * l[1]; }
+    const to = (Math.atan2(vx, vy) * DEG + 360) % 360; let best = null, bd = 31; for (const o of out) { const d = Math.abs(((to - o.az + 540) % 360) - 180); if (d < bd) { bd = d; best = o; } } if (best) best.n++; }
+  return tot ? out.map(o => ({...o, pct: o.n / tot})) : null; }
+
+/* ======================= render ======================= */
+let world = null, countries = null;
+const COL = d => d >= 1480 ? '#8b0a1a' : d >= 555 ? '#e2463b' : d >= 185 ? '#f98c33' : d >= 37 ? '#f9d64d' : '#4fd27a';
+const COLA = d => d >= 1000 ? '#8b0a1a' : d >= 100 ? '#e2463b' : d >= 10 ? '#f98c33' : d >= 1 ? '#f9d64d' : '#4fd27a';
+const COLK = d => d >= 100 ? '#8b0a1a' : d >= 10 ? '#e2463b' : d >= 1 ? '#f98c33' : d >= 0.1 ? '#f9d64d' : '#4fd27a';
+const fmt = (n, d = 0) => (+n).toLocaleString(lang, {maximumFractionDigits: d, minimumFractionDigits: d});
+const pill = (v, col, txt) => `<span class="pill" style="background:${col};color:${col === '#8b0a1a' ? '#fff' : '#0b0d12'}">${txt}</span>`;
+function render() {
+  fetchMet(ST.tg); const tg = TG.find(x => x[0] === ST.tg); ST.lonlat = [tg[1], tg[2]];
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-t]').forEach(e => { e.innerHTML = T(e.dataset.t); });
+  document.querySelectorAll('.lang button').forEach(b => b.classList.toggle('on', b.dataset.l === lang));
+  document.getElementById('scn').innerHTML = Object.keys(PRESETS).map(k => `<button data-p="${k}" class="${ST.preset === k ? 'on' : ''}">${T('sc')[k][0]}<small>${T('sc')[k][1]}</small></button>`).join('');
+  const seg = (key, items) => items.map(([v, t]) => `<button data-k="${key}" data-v="${v}" class="${String(ST[key]) === String(v) ? 'on' : ''}">${t}</button>`).join('');
+  document.getElementById('cTg').innerHTML = seg('tg', TG.map(t => [t[0], (lang === 'ru' ? t[3] : t[4]) + (t[5] ? ' ☢' : '')]));
+  document.getElementById('cMode').innerHTML = seg('mode', Object.entries(T('modes')));
+  document.getElementById('cBurst').innerHTML = seg('burst', Object.entries(T('bursts')));
+  document.getElementById('cRf').innerHTML = tg[5] ? seg('rf', [[0.01, '1%'], [0.1, '10%'], [0.3, '30%']]) : `<span class="note">${lang === 'ru' ? 'На этом объекте нет работающего реактора' : 'No operating reactor at this site'}</span>`;
+  document.getElementById('cWhen').innerHTML = seg('when', Object.entries(T('whens')));
+  document.getElementById('cDir').innerHTML = seg('dir', [['live', T('dirLive')], ['kz', T('dirKZ')]]);
+  document.getElementById('cY').value = Math.log10(ST.y * 1000); document.getElementById('oY').textContent = ST.y >= 1 ? ST.y.toFixed(1) + (lang === 'ru' ? ' Мт' : ' Mt') : Math.round(ST.y * 1000) + (lang === 'ru' ? ' кт' : ' kt');
+  document.querySelectorAll('.ry').forEach(e => e.style.display = ST.mode === 'reactor' ? 'none' : '');
+  document.querySelectorAll('.rr').forEach(e => e.style.display = ST.mode === 'burst' ? 'none' : '');
+  const p = params(); document.getElementById('met').textContent = T('met')(Object.assign({}, p.m, {cls: p.cls}));
+  // results
+  const card = (v, l, col) => `<div class="card"><div class="big" style="color:${col}">${v}</div><div class="note" style="margin-top:6px">${l}</div></div>`;
+  const frontFull = 6000; let html = '', cset = new Set();
+  const plR = p.rx ? polyR(p, 37, frontFull) : null, plA = p.ground ? polyA(p, 1, frontFull) : null;
+  for (const pl of [plR, plA]) if (pl && countries) for (const q of pl.filter((x, i) => i % 3 === 0).concat(axisPts(p))) for (const c of countries) if (d3.geoContains(c, q)) cset.add(c.properties.name);
+  const dirTo = p.rx ? p.rTo : p.effTo;
+  html += card(`${cmp8(dirTo)} · ${Math.round(dirTo)}°`, `${T('r_dir')} · ${Math.round((p.rx ? p.rMs * 3.6 : p.effKmh))} ${lang === 'ru' ? 'км/ч' : 'km/h'}`, 'var(--gold)');
+  if (p.rx) html += card('≈' + fmt(Math.round(reach(plR) / 10) * 10) + ' km', `${T('r_far')}: ${T('r_far_r')}`, '#f9d64d');
+  if (p.ground) html += card('≈' + fmt(Math.round(reach(plA) / 10) * 10) + ' km', `${T('r_far')}: ${T('r_far_a')}`, '#f98c33');
+  if (p.burstOn) { const r = radii(p); html += card(fmt(r.blast, 1) + ' km', T('r_blast'), '#ee5545') + card(fmt(r.burn, 1) + ' km', T('r_fire'), '#f98c33'); if (!p.ground) html += card('—', T('r_none'), 'var(--grn)'); }
+  html += card(cset.size, T('r_cty') + (cset.size ? ': ' + [...cset].slice(0, 8).map(cName).join(', ') + (cset.size > 8 ? '…' : '') : ''), '#ee5545');
+  document.getElementById('res').innerHTML = html;
+  // odds
+  const od = regionOdds(p); document.getElementById('odds').innerHTML = od ? od.sort((a, b) => b.pct - a.pct).map(o => `<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:13.5px"><span>${nm(o.r)} <span class="note">${cmp8(o.az)}</span></span><b style="font-family:var(--mono)">${Math.round(o.pct * 100)}%</b></div><div class="bar"><i style="width:${Math.max(1, o.pct * 100)}%;background:${o.pct > .3 ? '#ee5545' : o.pct > .1 ? '#f98c33' : '#f9d64d'}"></i></div></div>`).join('')
+    : `<div class="note">${lang === 'ru' ? 'Загружаю прогноз ветра…' : 'Loading the wind forecast…'}</div>`;
+  // cities
+  const rows = CITIES.map(c => { const km = kmOf(p.lon, p.lat, c[2], c[3]), b = brgOf(p.lon, p.lat, c[2], c[3]); let lvl = 0, txt = '', col = '#2a3140', when = null;
+    if (p.rx) { const d = ((b - p.rTo + 540) % 360) - 180, s = km * Math.cos(d * RAD), y = km * Math.sin(d * RAD), v = s > 0 ? rxDep(p, s * 1000, y * 1000) : 0;
+      if (v >= 37) { lvl = v; txt = fmt(v) + ' kBq/m²'; col = COL(v); when = s / (p.rMs * 3.6); } }
+    if (p.ground) { const a = levelA(p, km, b); if (a.lvl >= 1 && (!lvl || a.lvl >= 1)) { const t = a.s / p.effKmh; txt = (txt ? txt + ' · ' : '') + fmt(a.lvl, a.lvl < 10 ? 1 : 0) + ' R/h'; col = COLA(a.lvl); when = when == null ? t : Math.min(when, t); lvl = Math.max(lvl, a.lvl); } }
+    if (p.burstOn && km <= radii(p).burn) { txt = (lang === 'ru' ? 'взрыв и пожары' : 'blast and fire'); col = '#8b0a1a'; when = 0; lvl = 1e9; }
+    return {c, km, lvl, txt, col, when, what: lvl >= 1e9 ? '' : p.rx && lvl && txt.includes('kBq') ? T('cat_r')(parseFloat(txt.replace(/\s/g, ''))) : lvl ? T('cat_a')(lvl) : ''}; })
+    .sort((a, b) => (b.lvl > 0) - (a.lvl > 0) || a.km - b.km);
+  document.getElementById('cities').innerHTML = `<tr><th>${T('th_city')}</th><th style="text-align:right">${T('th_km')}</th><th>${T('th_hit')}</th><th style="text-align:right">${T('th_when')}</th><th>${T('th_val')}</th><th>${T('th_what')}</th></tr>`
+    + rows.map(r => `<tr><td>${nm(r.c)}</td><td class="n">${fmt(Math.round(r.km))} km</td><td>${r.lvl ? pill(0, r.col, T('hit_y')) : `<span class="note">${T('hit_n')}</span>`}</td><td class="n">${r.when != null ? (r.when < 1 ? '<1' : fmt(Math.round(r.when))) + ' ' + T('h') : '—'}</td><td style="font-family:var(--mono);font-size:12.5px">${r.txt || '—'}</td><td class="note">${r.what}</td></tr>`).join('');
+  // Kazakhstan worst case
+  const kz = KZC.map(c => { const km = kmOf(p.lon, p.lat, c[2], c[3]); let rx = 0, dose = 0, ta;
+    if (p.rx) { const q = Object.assign({}, p, {rMs: Math.max(p.rMs, 10), cls: 'D'}); rx = rxDep(q, km * 1000, 0); ta = km / (q.rMs * 3.6); }
+    if (p.ground) { const kmh = Math.max(p.effKmh, 90), base = 257 * Math.pow(p.Y, 0.45) * Math.pow(kmh / 24, 0.5), t0 = Math.max(1, km / kmh), d1 = 100 * Math.pow(km / base, -1 / 0.53);
+      dose = d1 * 5 * (Math.pow(t0, -0.2) - Math.pow(t0 + 48, -0.2)); ta = ta == null ? t0 : Math.min(ta, t0); }
+    return {c, km, rx, dose, ta}; }).sort((a, b) => (b.rx + b.dose * 100) - (a.rx + a.dose * 100));
+  const hd = `<tr><th>${T('th_city')}</th><th style="text-align:right">${T('th_km')}</th><th style="text-align:right">${T('th_when')}</th>${p.rx ? `<th style="text-align:right">Cs-137</th><th style="text-align:right">${lang === 'ru' ? 'мЗв/год' : 'mSv/yr'}</th>` : ''}${p.ground ? `<th style="text-align:right">${lang === 'ru' ? 'доза 48 ч' : '48 h dose'}</th>` : ''}<th>${T('th_what')}</th></tr>`;
+  document.getElementById('kz').innerHTML = (p.rx || p.ground) ? hd + kz.map(k => `<tr><td>${nm(k.c)}</td><td class="n">${fmt(Math.round(k.km))} km</td><td class="n">${fmt(Math.round(k.ta))} ${T('h')}</td>`
+      + (p.rx ? `<td class="n" style="color:${COL(k.rx)}">${k.rx < 1 ? '<1' : fmt(k.rx)} kBq/m²</td><td class="n">${fmt(k.rx * 0.0025 * 8760 * 0.4 / 1000, 2)}</td>` : '')
+      + (p.ground ? `<td class="n" style="color:${COLK(k.dose)}">${k.dose < 0.1 ? '<0.1' : fmt(k.dose, k.dose < 10 ? 1 : 0)} R</td>` : '')
+      + `<td class="note">${p.ground ? T('cat_kz')(k.dose) : T('cat_r')(k.rx)}</td></tr>`).join('')
+    : `<tr><td class="note">${T('r_none')}</td></tr>`;
+  // static blocks
+  const h = T('cmp_h'); document.getElementById('cmp').innerHTML = `<tr>${h.map(x => `<th>${x}</th>`).join('')}</tr>` + T('cmp').map(r => `<tr>${r.map((x, j) => `<td${j === 0 ? ' style="font-weight:600"' : ''}>${x}</td>`).join('')}</tr>`).join('');
+  document.getElementById('do').innerHTML = T('do').map(x => `<li>${x}</li>`).join('');
+  document.getElementById('how').innerHTML = T('how'); document.getElementById('ctx').innerHTML = T('ctx') + `<div class="note">${T('src_as')}</div>`;
+  document.getElementById('srcs').innerHTML = SOURCES.map(s => `<li><a href="${s[1]}" target="_blank" rel="noopener">${s[0]}</a></li>`).join('');
+  document.getElementById('leg').innerHTML = (p.rx ? LV_R.map(([v, c]) => `<span><i style="background:${c}"></i>${v}+ kBq/m²</span>`).join('') : '')
+    + (p.ground ? LV_A.map(([v, c]) => `<span><i style="background:${c};opacity:.75"></i>${v}+ R/h</span>`).join('') : '')
+    + `<span><i style="background:#b478ff"></i>${lang === 'ru' ? 'частицы облака' : 'cloud particles'}</span>`;
+  drawMap(p);
+}
+function axisPts(p) { const out = [], to = p.rx ? p.rTo : p.effTo; for (let k = 50; k <= 3000; k += 50) out.push(dest(p.lon, p.lat, to, k)); return out.slice(0, p.rx ? 60 : Math.ceil(adim(p, 1).L / 50)); }
+const CN_RU = {Iran: 'Иран', Iraq: 'Ирак', Kuwait: 'Кувейт', 'Saudi Arabia': 'Саудовская Аравия', Qatar: 'Катар', 'United Arab Emirates': 'ОАЭ', Oman: 'Оман', Bahrain: 'Бахрейн', Turkmenistan: 'Туркменистан', Uzbekistan: 'Узбекистан', Kazakhstan: 'Казахстан', Afghanistan: 'Афганистан', Pakistan: 'Пакистан', India: 'Индия', Azerbaijan: 'Азербайджан', Armenia: 'Армения', Georgia: 'Грузия', Turkey: 'Турция', Syria: 'Сирия', Jordan: 'Иордания', Russia: 'Россия', Tajikistan: 'Таджикистан', Kyrgyzstan: 'Кыргызстан', China: 'Китай', Israel: 'Израиль', Lebanon: 'Ливан', Yemen: 'Йемен', Egypt: 'Египет'};
+const cName = n => lang === 'ru' ? (CN_RU[n] || n) : n;
+let proj, path;
+function drawMap(p) {
+  const svg = d3.select('#map'); svg.selectAll('*').remove();
+  proj = d3.geoConicConformal().parallels([25, 45]).rotate([-55, 0]).fitExtent([[10, 10], [890, 630]], {type: 'MultiPoint', coordinates: [[30, 14], [82, 14], [30, 54], [82, 54]]}); path = d3.geoPath(proj);
+  svg.append('path').attr('d', path(d3.geoGraticule10())).attr('fill', 'none').attr('stroke', '#1a2030');
+  if (world) svg.append('g').selectAll('path').data(world).join('path').attr('d', path).attr('fill', d => d.properties.name === 'Kazakhstan' ? '#1d2433' : '#161b25').attr('stroke', '#323a49').attr('stroke-width', .7);
+  const g = svg.append('g'), t = ST.t, poly = (pl, col, op) => { if (pl) g.append('path').attr('d', path({type: 'Polygon', coordinates: [pl.concat([pl[0]]).reverse()]})).attr('fill', col).attr('fill-opacity', op).attr('stroke', col).attr('stroke-width', 1.3); };
+  if (p.rx) for (const [lvl, col] of LV_R) poly(polyR(p, lvl, p.rMs * 3.6 * Math.max(0.2, t)), col, .3);
+  if (p.ground) for (const [lvl, col] of LV_A) poly(polyA(p, lvl, p.effKmh * Math.max(0.05, t)), col, .28);
+  // particles: carried by the wind at their height
+  let sd = 7; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647, gs = () => Math.sqrt(-2 * Math.log(rnd() + 1e-9)) * Math.cos(2 * Math.PI * rnd());
+  const pts = []; const top = p.rx && !p.ground ? 2.5 : p.top;
+  for (let i = 0; i < 900; i++) { const hgt = p.rx && !p.ground ? 0.3 + 2.2 * rnd() : top * Math.pow(rnd(), 0.7), w = windAt(p.lv, hgt), vs = p.rx && !p.ground ? 0.004 * Math.exp(gs()) : Math.exp(Math.log(0.6) + gs()), Tf = Math.min(72, hgt * 1000 / vs / 3600);
+    const ll = dest(p.lon, p.lat, (w.to + gs() * 8 + 360) % 360, w.ms * 3.6 * Math.min(t, Tf)), s = proj(ll); if (s) pts.push([s[0], s[1], t >= Tf]); }
+  g.selectAll('rect.pt').data(pts).join('rect').attr('x', d => d[0] - 1).attr('y', d => d[1] - 1).attr('width', 2).attr('height', 2).attr('fill', d => d[2] ? 'rgba(180,120,255,.65)' : 'rgba(230,230,245,.5)');
+  // blast rings
+  const c = proj([p.lon, p.lat]);
+  if (p.burstOn) { const r = radii(p); for (const [km, col] of [[r.burn, '#f9d64d'], [r.blast, '#ee5545']]) { const e = proj(dest(p.lon, p.lat, 90, km)); g.append('circle').attr('cx', c[0]).attr('cy', c[1]).attr('r', Math.max(2, Math.hypot(e[0] - c[0], e[1] - c[1]))).attr('fill', 'none').attr('stroke', col).attr('stroke-width', 1.5); } }
+  // cities
+  const cg = svg.append('g').attr('font-family', 'ui-monospace,monospace').attr('font-size', 10.5);
+  for (const k of CITIES.concat(KZC.map(x => [x[0], x[1], x[2], x[3], 1]))) { const s = proj([k[2], k[3]]); if (!s) continue;
+    cg.append('circle').attr('cx', s[0]).attr('cy', s[1]).attr('r', k[4] ? 3 : 2.5).attr('fill', k[4] ? '#5ccdf2' : '#d6dbe3');
+    cg.append('text').attr('x', s[0] + 5).attr('y', s[1] + 3).attr('fill', k[4] ? '#9fdcf5' : '#aab2c0').text(nm(k)); }
+  // target + wind arrow
+  svg.append('circle').attr('cx', c[0]).attr('cy', c[1]).attr('r', 6).attr('fill', '#f2c14e').attr('stroke', '#0b0d12').attr('stroke-width', 2);
+  svg.append('text').attr('x', c[0] + 9).attr('y', c[1] - 8).attr('fill', '#fff').attr('font-weight', 800).attr('font-size', 12).attr('font-family', 'ui-monospace,monospace').text('☢ ' + (lang === 'ru' ? p.tg[3] : p.tg[4]));
+  const to = p.rx ? p.rTo : p.effTo, tip = proj(dest(p.lon, p.lat, to, 380));
+  svg.append('line').attr('x1', c[0]).attr('y1', c[1]).attr('x2', tip[0]).attr('y2', tip[1]).attr('stroke', '#fff').attr('stroke-width', 1.5).attr('stroke-dasharray', '4 4');
+  document.getElementById('oT').textContent = 'H+' + ST.t.toFixed(1) + ' ' + T('h');
+}
+/* ======================= events ======================= */
+document.addEventListener('click', e => {
+  const pb = e.target.closest('[data-p]'); if (pb) { ST.preset = pb.dataset.p; Object.assign(ST, PRESETS[ST.preset]); ST.t = 24; render(); return; }
+  const b = e.target.closest('[data-k]'); if (b) { const k = b.dataset.k, v = b.dataset.v; ST[k] = ['rf'].includes(k) ? +v : v; ST.preset = null; render(); return; }
+  const l = e.target.closest('[data-l]'); if (l) { lang = l.dataset.l; try { localStorage.setItem('wn_lang', lang); } catch (err) {} render(); } });
+document.getElementById('cY').addEventListener('input', e => { ST.y = Math.round(Math.pow(10, +e.target.value)) / 1000; ST.preset = null; render(); });
+document.getElementById('cT').addEventListener('input', e => { ST.t = +e.target.value; ST.play = false; document.getElementById('bPlay').textContent = '▶'; drawMap(params()); });
+let raf = 0; document.getElementById('bPlay').addEventListener('click', () => { ST.play = !ST.play; document.getElementById('bPlay').textContent = ST.play ? '❚❚' : '▶'; if (ST.play && ST.t >= 72) ST.t = 0;
+  const step = () => { if (!ST.play) return; ST.t = Math.min(72, ST.t + 0.4); document.getElementById('cT').value = ST.t; drawMap(params()); if (ST.t >= 72) { ST.play = false; document.getElementById('bPlay').textContent = '▶'; return; } raf = requestAnimationFrame(step); }; step(); });
+render();
+fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json').then(r => r.json()).then(t => { world = topojson.feature(t, t.objects.countries).features.filter(f => { const b = d3.geoBounds(f); return b[1][0] > 15 && b[0][0] < 100 && b[1][1] > 5 && b[0][1] < 62; }); countries = world; render(); }).catch(() => {});
+</script>
+</body>
+</html>

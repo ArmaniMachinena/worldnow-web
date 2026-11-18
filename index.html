@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
-<script>window.WN_BUILD="20261118201651";</script>
+<script>window.WN_BUILD="20261118202601";</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>WorldNow:Emergency</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -1224,12 +1224,13 @@ function nkParams() { const n = S.nk, tg = NK_T.find(x => x[0] === n.tg), met = 
    (wind meander over hundreds of km), vertical spread capped by a 1.5 km mixing layer, dry/wet deposition
    velocity 3 mm/s (10 mm/s in rain) with plume depletion. Calibrated so 30% of a 1000 MWe core gives
    Chernobyl-like zones (hundreds of kBq/m² at ~100 km, tens at ~1000 km). */
-function nkRxDep(p, xm, ym) { if (!p.rx || xm < 50) return 0; const g = NK_SIG[p.cls] || NK_SIG.D, sg = g(xm), sy = Math.max(sg[0], 0.08 * xm), Lm = 1500, u = p.rMs, vd = p.rain ? 0.01 : 0.003;
+function nkRxDep(p, xm, ym) { if (!p.rx || xm < 50) return 0; const g = NK_SIG[p.cls] || NK_SIG.D, sg = g(xm).slice(); if (xm > 1e5) sg[1] = Math.max(sg[1], NK_SIG.D(xm)[1]);
+  const sy = Math.max(sg[0], 0.08 * xm), Lm = 1500, u = p.rMs, vd = p.rain ? 0.01 : 0.003;
   const dep = Math.exp(-vd * xm / (u * Lm)), lat = Math.exp(-ym * ym / (2 * sy * sy));
   let chi = 0; for (const [f, Hs] of [[0.4, 100], [0.6, 1000]]) chi += f * (sg[1] < Lm ? p.rx / (Math.PI * sy * sg[1] * u) * Math.exp(-Hs * Hs / (2 * sg[1] * sg[1])) : p.rx / (Math.sqrt(2 * Math.PI) * sy * Lm * u));
   return chi * vd * dep * lat / 1000; }
 function nkR(p, lvl, frontKm) { const a = [], b = []; let peak = 0;
-  for (let i = 0; i <= 90; i++) { const x = 500 * Math.pow(1.085, i); if (x / 1000 > Math.min(frontKm, 4000)) break; const c = nkRxDep(p, x, 0); if (c < lvl) { if (peak) break; continue; } peak = 1;
+  for (let i = 0; i <= 116; i++) { const x = 500 * Math.pow(1.085, i); if (x / 1000 > Math.min(frontKm, 4500)) break; const c = nkRxDep(p, x, 0); if (c < lvl) { if (peak) break; continue; } peak = 1;
     const g = NK_SIG[p.cls] || NK_SIG.D, sy = Math.max(g(x)[0], 0.08 * x), hw = sy * Math.sqrt(2 * Math.log(c / lvl)) / 1000, m = nkDest(p.lon, p.lat, p.rTo, x / 1000);
     a.push(nkDest(m[0], m[1], p.rTo + 90, hw)); b.push(nkDest(m[0], m[1], p.rTo - 90, hw)); }
   return a.length > 1 ? [[p.lon, p.lat]].concat(a, b.reverse()) : null; }
