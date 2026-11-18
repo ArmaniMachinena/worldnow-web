@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ebola · spread model · WorldNow:Emergency</title>
+<meta name="description" content="How likely is Bundibugyo Ebola to reach each country and the world, with and without control measures. Open model with sources.">
+<style>
+:root{--bg:#0b0d12;--panel:#12151c;--line:#262b35;--fg:#eef0f3;--dim:#aaa69d;--gold:#f2c14e;--red:#ee5545;--org:#f98c33;--yel:#f9d64d;--grn:#4fd27a;--blu:#5ccdf2;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--gold)}
+.wrap{max-width:1180px;margin:0 auto;padding:16px 16px 60px}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.brand{font-family:var(--mono);font-weight:800;letter-spacing:.08em;color:var(--gold);font-size:13px;text-decoration:none}
+.brand span{color:var(--red)}
+.lang{margin-left:auto;display:flex;gap:4px}
+.lang button,.seg button{background:#1a1e27;border:1px solid var(--line);color:var(--fg);padding:7px 11px;border-radius:8px;font:inherit;font-size:13px;cursor:pointer}
+.lang button.on,.seg button.on{border-color:var(--gold);color:var(--gold);background:rgba(242,193,78,.08)}
+h1{font-size:clamp(22px,3.4vw,32px);line-height:1.15;margin:6px 0 4px}
+.lead{color:var(--dim);max-width:820px;margin:0 0 14px}
+.warn{border:1px solid rgba(238,85,69,.6);background:rgba(238,85,69,.07);border-radius:10px;padding:10px 12px;font-size:13.5px;color:#ffcbc5;margin:10px 0 16px}
+.kick{font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin:22px 0 8px}
+.grid{display:grid;gap:12px}
+.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:1.25fr 1fr}
+@media(max-width:900px){.g4{grid-template-columns:repeat(2,1fr)}.g3,.g2{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.stat b{display:block;font-family:var(--mono);font-size:clamp(20px,2.6vw,28px);line-height:1.1}
+.stat span{font-size:12.5px;color:var(--dim)}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{text-align:left;padding:9px 12px;font-size:14px}
+.seg button small{display:block;color:var(--dim);font-size:11.5px;margin-top:2px}
+.ctl{display:grid;grid-template-columns:200px 1fr 70px;gap:8px 12px;align-items:center;font-size:13.5px;margin-top:10px}
+@media(max-width:600px){.ctl{grid-template-columns:1fr 70px}.ctl label{grid-column:1/-1;margin-bottom:-6px}}
+.ctl input{width:100%;accent-color:var(--gold)}
+.ctl output{font-family:var(--mono);text-align:right;color:var(--gold)}
+.big{font-family:var(--mono);font-size:clamp(30px,5vw,46px);font-weight:800;line-height:1}
+.bar{height:8px;border-radius:4px;background:#222833;overflow:hidden;margin-top:8px}.bar i{display:block;height:100%}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);text-align:left;font-weight:700;padding:6px 6px;border-bottom:1px solid var(--line)}
+td{padding:7px 6px;border-bottom:1px solid #1c2029;vertical-align:middle}
+td.n{font-family:var(--mono);text-align:right;white-space:nowrap}
+.pill{display:inline-block;min-width:54px;text-align:center;font-family:var(--mono);font-weight:800;font-size:12px;padding:2px 6px;border-radius:5px;color:#0b0d12}
+#map{width:100%;height:auto;display:block}
+.legend{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim);flex-wrap:wrap;margin-top:6px}
+.legend i{display:inline-block;width:26px;height:10px;border-radius:2px}
+.note{font-size:12.5px;color:var(--dim)}
+.scr{overflow-x:auto}
+#chart{width:100%;height:auto}
+.tip{position:fixed;pointer-events:none;background:rgba(10,12,17,.96);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12.5px;z-index:9;max-width:260px;display:none}
+ol.src{font-size:12.5px;color:var(--dim);padding-left:20px}ol.src li{margin:3px 0}
+.why li{margin:4px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <a class="brand" href="../">WORLDNOW:<span>EMERGENCY</span></a>
+  <div class="lang"><button data-l="ru">RU</button><button data-l="en">EN</button></div>
+</header>
+<h1 data-t="title"></h1>
+<p class="lead" data-t="lead"></p>
+<div class="warn" data-t="warn"></div>
+
+<div class="kick" data-t="k_now"></div>
+<div class="grid g4" id="now"></div>
+
+<div class="kick" data-t="k_scn"></div>
+<div class="card">
+  <div class="seg" id="scn"></div>
+  <div class="ctl">
+    <label for="iR" data-t="c_R"></label><input id="iR" type="range" min="0.6" max="2.2" step="0.01"><output id="oR"></output>
+    <label for="iE" data-t="c_E"></label><input id="iE" type="range" min="0.05" max="3" step="0.05"><output id="oE"></output>
+    <label for="iL" data-t="c_L"></label><input id="iL" type="range" min="0.2" max="1.2" step="0.01"><output id="oL"></output>
+    <label for="iH" data-t="c_H"></label><input id="iH" type="range" min="1" max="12" step="1"><output id="oH"></output>
+  </div>
+  <div class="note" style="margin-top:8px" data-t="c_note"></div>
+</div>
+
+<div class="kick" data-t="k_planet"></div>
+<div class="grid g4" id="planet"></div>
+
+<div class="grid g2" style="margin-top:12px">
+  <div class="card"><div class="kick" style="margin-top:0" data-t="k_map"></div><svg id="map" viewBox="0 0 960 500"></svg>
+    <div class="legend" id="leg"></div></div>
+  <div class="card"><div class="kick" style="margin-top:0" data-t="k_src"></div><svg id="chart" viewBox="0 0 520 300"></svg><div class="note" id="chartNote"></div></div>
+</div>
+
+<div class="kick" data-t="k_cty"></div>
+<div class="card scr"><table id="tbl"></table><div class="note" style="margin-top:8px" data-t="t_note"></div></div>
+
+<div class="kick" data-t="k_cmp"></div>
+<div class="card scr"><table id="cmp"></table></div>
+
+<div class="kick" data-t="k_meas"></div>
+<div class="grid g3" id="meas"></div>
+
+<div class="kick" data-t="k_why"></div>
+<div class="card"><ul class="why" id="why"></ul></div>
+
+<div class="kick" data-t="k_how"></div>
+<div class="card note" id="how"></div>
+
+<div class="kick" data-t="k_sources"></div>
+<div class="note" id="asof"></div><ol class="src" id="srcs"></ol>
+</div>
+<div class="tip" id="tip"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<script>
+/* ---------------- data (as of 17 Nov 2026) ---------------- */
+const NOW = {date: '2026-11-17', cases: 11463, deaths: 5597, drc: 11432, weekly: 450, zones: 67, provinces: 8,
+  abroad: [['UGA', 20, 2], ['KEN', 9, 2], ['FRA', 1, 0], ['NGA', 1, 0]], exports: 4};
+// iso3, ISO numeric (world-atlas id), ru, en, direct share of travel out of the affected area (relative weight),
+// health-system tier (1 strong, 2 middle, 3 fragile), air hub weight for onward spread, in Africa?
+const C = [
+ ['COG','178','Респ. Конго','Rep. of Congo',9,3,0.4,1],['UGA','800','Уганда','Uganda',14,2,0.6,1],['RWA','646','Руанда','Rwanda',9,2,0.5,1],
+ ['BDI','108','Бурунди','Burundi',6,3,0.2,1],['SSD','728','Южный Судан','South Sudan',3,3,0.2,1],['AGO','024','Ангола','Angola',7,3,0.6,1],
+ ['ZMB','894','Замбия','Zambia',5,2,0.3,1],['TZA','834','Танзания','Tanzania',4,2,0.6,1],['CAF','140','ЦАР','Central African Rep.',2,3,0.1,1],
+ ['KEN','404','Кения','Kenya',4,2,1.0,1],['ETH','231','Эфиопия','Ethiopia',3,2,1.5,1],['ZAF','710','ЮАР','South Africa',3,2,1.5,1],
+ ['NGA','566','Нигерия','Nigeria',1.2,2,1.0,1],['CMR','120','Камерун','Cameroon',1,2,0.3,1],['CIV','384','Кот-д’Ивуар','Côte d’Ivoire',1,2,0.4,1],
+ ['GAB','266','Габон','Gabon',0.8,2,0.2,1],['SEN','686','Сенегал','Senegal',0.6,2,0.4,1],['GHA','288','Гана','Ghana',0.6,2,0.4,1],
+ ['TGO','768','Того','Togo',0.4,2,0.3,1],['BEN','204','Бенин','Benin',0.3,2,0.2,1],['MAR','504','Марокко','Morocco',0.8,2,1.0,1],
+ ['EGY','818','Египет','Egypt',0.6,2,1.5,1],['MWI','454','Малави','Malawi',0.4,3,0.1,1],['MOZ','508','Мозамбик','Mozambique',0.4,3,0.2,1],
+ ['ZWE','716','Зимбабве','Zimbabwe',0.4,2,0.2,1],
+ ['BEL','056','Бельгия','Belgium',3,1,2,0],['FRA','250','Франция','France',2.5,1,6,0],['TUR','792','Турция','Türkiye',1.2,1,5,0],
+ ['ARE','784','ОАЭ','UAE',1.2,1,6,0],['QAT','634','Катар','Qatar',0.5,1,3,0],['GBR','826','Великобритания','United Kingdom',0.7,1,7,0],
+ ['USA','840','США','United States',0.7,1,10,0],['CHN','156','Китай','China',0.9,1,8,0],['IND','356','Индия','India',0.5,2,4,0],
+ ['DEU','276','Германия','Germany',0.4,1,6,0],['CHE','756','Швейцария','Switzerland',0.3,1,2,0],['CAN','124','Канада','Canada',0.3,1,3,0],
+ ['NLD','528','Нидерланды','Netherlands',0.3,1,4,0],['ITA','380','Италия','Italy',0.3,1,4,0],['ESP','724','Испания','Spain',0.2,1,4,0],
+ ['SAU','682','Саудовская Аравия','Saudi Arabia',0.3,1,3,0],['LBN','422','Ливан','Lebanon',0.3,2,0.5,0],['PRT','620','Португалия','Portugal',0.15,1,1.2,0],
+ ['BRA','076','Бразилия','Brazil',0.1,2,2,0],['PAK','586','Пакистан','Pakistan',0.1,2,1,0],['RUS','643','Россия','Russia',0.08,1,2.5,0],
+ ['JPN','392','Япония','Japan',0.05,1,3,0],['KAZ','398','Казахстан','Kazakhstan',0.02,1,0.5,0],['IRN','364','Иран','Iran',0.02,2,1,0],
+ ['UZB','860','Узбекистан','Uzbekistan',0.01,2,0.3,0],['KOR','410','Южная Корея','South Korea',0.04,1,3,0],['AUS','036','Австралия','Australia',0.03,1,2,0]];
+// local R0 in each tier if nothing is done there (only basic hospital hygiene)
+const TIER_R = {1: 0.9, 2: 1.4, 3: 1.7};
+// scenario presets: R in DRC, exports per 1000 cases, how much the receiving country cuts transmission (multiplier on local R)
+const SCN = {
+  none:    {R: 1.6,  E: 1.0,  L: 1.0},
+  current: {R: 1.12, E: 0.35, L: 0.6},
+  strong:  {R: 0.8,  E: 0.15, L: 0.35}};
+const K_DISP = 0.3;          // superspreading: negative-binomial dispersion k for Ebola (estimates 0.1–0.5)
+const GEN_DAYS = 15;         // serial interval
+const CFR = 0.49;            // current confirmed CFR in DRC
+const CAP = 3e6;             // ceiling on cumulative cases in the affected provinces (people who can realistically be reached)
+const OUT_SIZE = 300;        // size of a typical uncontrolled secondary outbreak, for onward exports
+
+/* ---------------- texts ---------------- */
+const TX = {
+ru: {title: 'Эбола (вирус Бундибугио): вероятность заражения стран и планеты',
+ lead: 'Открытая модель: сколько ещё будет случаев в ДР Конго, с какой вероятностью инфекция попадёт в каждую страну и закрепится там — без мер и с мерами. Учтены особенности Эболы и опыт прошлых эпидемий.',
+ warn: 'Это учебная модель на открытых данных и опубликованных параметрах, а не прогноз ВОЗ. Цифры показывают порядок величин и разницу между сценариями. Решения принимайте по официальным сообщениям ВОЗ, Africa CDC и минздрава своей страны.',
+ k_now: 'Сейчас', k_scn: 'Сценарий', k_planet: 'Что будет с планетой', k_map: 'Вероятность завоза по странам', k_src: 'Новые случаи в ДР Конго в неделю',
+ k_cty: 'Страны: завоз, местная передача, вспышка', k_cmp: 'Сравнение с прошлыми эпидемиями', k_meas: 'Насколько помогают меры', k_why: 'Почему Эбола не станет «вторым ковидом» — и где она опасна', k_how: 'Как считается', k_sources: 'Источники',
+ s_none: 'Без мер', s_none_d: 'Отслеживание контактов и безопасные похороны остановились, границы открыты', s_current: 'Как сейчас', s_current_d: 'Нынешний ответ: ~450 случаев в неделю, 4 вывоза за 11 тыс. случаев', s_strong: 'Жёсткие меры', s_strong_d: 'Полное отслеживание контактов, изоляция, скрининг на выезде, вакцины в испытаниях',
+ c_R: 'Число заражений от одного больного в ДР Конго (R)', c_E: 'Вывозов за рубеж на 1000 случаев', c_L: 'Передача в принимающих странах (×)', c_H: 'Горизонт, месяцев',
+ c_note: 'Ползунки меняют выбранный сценарий. R больше 1 — эпидемия растёт, меньше 1 — затухает. «Передача ×» — насколько страны-получатели снижают распространение (1 — ничего не делают).',
+ n_cases: 'подтверждённых случаев', n_deaths: 'смертей', n_week: 'новых случаев в неделю', n_abroad: 'стран со случаями за пределами ДР Конго',
+ p_new: 'новых случаев в ДР Конго за горизонт', p_deaths: 'ожидаемых смертей (летальность 49%)', p_exp: 'ожидаемых вывозов за рубеж', p_cnt: 'стран, куда вирус скорее всего попадёт (вероятность больше 50%)',
+ p_out: 'вероятность хотя бы одного завоза за пределы Африки', p_loc: 'вероятность местной передачи за пределами Африки', p_sus: 'вероятность устойчивой вспышки за пределами Африки', p_afr: 'вероятность новой устойчивой вспышки в другой стране Африки',
+ th_c: 'Страна', th_imp: 'Завоз', th_loc: 'Местная передача', th_sus: 'Вспышка', th_r: 'R на месте', th_e: 'Ожид. завозов',
+ t_note: '«Завоз» — хотя бы один заболевший приедет за горизонт. «Местная передача» — заразит хотя бы одного человека на месте. «Вспышка» — цепочка не оборвётся сама и станет устойчивой. Казахстан и Узбекистан — в конце списка.',
+ more: 'Показать все страны', less: 'Свернуть',
+ leg: ['меньше 1%', '1–5%', '5–20%', '20–50%', '50–90%', 'больше 90%', 'источник'],
+ chart_note: (a, b, c) => `Сплошная линия — выбранный сценарий. Пунктир: без мер (${a}), как сейчас (${b}), жёсткие меры (${c}) — всего новых случаев за горизонт.`,
+ m_title: s => ({none: 'Без мер', current: 'Как сейчас', strong: 'Жёсткие меры'})[s],
+ m_lines: ['Новых случаев в ДР Конго', 'Стран с вероятным завозом', 'Устойчивая вспышка вне Африки', 'Ожидаемых смертей'],
+ cmp_h: ['Эпидемия', 'R0', 'Заразен до симптомов', 'Летальность', 'Случаев', 'Стран', 'Как передаётся'],
+ cmp: [['Эбола, Бундибугио, ДР Конго 2026 (идёт)', '1,1–1,6', 'нет', '≈49%', '11 463', '5', 'кровь и выделения больного или умершего'],
+  ['Эбола, Западная Африка 2014–16', '1,5–2,0', 'нет', '≈40%', '28 600', '10 (7 — завозные, без эпидемии)', 'то же'],
+  ['Эбола, ДР Конго (Киву) 2018–20', '1,1–1,5', 'нет', '≈66%', '3 470', '2', 'то же; была вакцина'],
+  ['SARS, 2003', '2–3', 'почти нет', '≈10%', '8 096', '29', 'воздушно-капельный'],
+  ['MERS, с 2012', '<1', 'нет', '≈36%', '≈2 600', '27', 'верблюды, больницы'],
+  ['Грипп H1N1, 2009', '1,4–1,6', 'да', '≈0,02%', 'сотни млн', 'весь мир', 'воздушно-капельный'],
+  ['Mpox, 2022', '1,4–2,4', 'частично', '<0,2%', '>100 000', '>120', 'тесный контакт'],
+  ['COVID-19, 2020–23', '2,5–3 (позже 5+)', 'да, ~40–50%', '≈1% (ранние оценки)', 'сотни млн', 'весь мир', 'воздух, без симптомов']],
+ meas: [['Отслеживание контактов и изоляция', 'Главная мера против Эболы. В 2014 году Нигерия остановила вспышку от одного завозного больного на 20 случаях; Сенегал — на одном.'],
+  ['Безопасные похороны', 'Тело умершего от Эболы особенно заразно. В Западной Африке заметная доля заражений шла через похоронные обряды.'],
+  ['Скрининг на выезде и въезде', 'Измерение температуры и опрос ловят больных, но не тех, кто ещё в инкубации (до 21 дня). Снижает вывоз, но не до нуля.'],
+  ['Запреты на поездки', 'Оценки 2014 года: закрытие авиасообщения откладывает завоз лишь на недели и мешает доставке помощи. ВОЗ их не рекомендует.'],
+  ['Карантин контактов на 21 день', 'Работает, если люди доверяют властям; при насилии и недоверии (восток ДР Конго) контакты теряются.'],
+  ['Вакцина', 'Ervebo создана против штамма Заир и для Бундибугио не утверждена. ВОЗ одобрила испытания двух новых вакцин.']],
+ why: ['Эбола передаётся через кровь и выделения больного, а не по воздуху. Человек почти не заразен, пока нет симптомов, а с симптомами обычно слишком болен, чтобы путешествовать.',
+  'Поэтому даже без мер R вне очага в странах с нормальными больницами ниже 1: отдельные случаи и короткие цепочки возможны, большая эпидемия — маловероятна.',
+  'Опасность — в странах со слабой медициной и рядом с очагом: Южный Судан, ЦАР, Бурунди, Ангола, Республика Конго (Браззавиль через реку от Киншасы). Там без мер R может быть выше 1.',
+  'Главный риск для мира — не пандемия, а затяжная эпидемия в Центральной Африке: тысячи смертей, особенно среди детей (7 из 10 заболевших детей до 5 лет умирают), и постоянные завозы в соседние страны.',
+  'Для Казахстана прямой риск очень низкий: прямых рейсов нет, поток людей ничтожный, больницы могут изолировать больного. Реальный путь — через транзитные хабы (Стамбул, Дубай, Доха).'],
+ how: `<p><b>1. Эпидемия в ДР Конго.</b> Сейчас ~450 новых случаев в неделю. Каждые ${GEN_DAYS} дней (интервал между поколениями) число случаев умножается на R; рост ограничен числом людей, до которых вирус реально может дойти (потолок ${(CAP / 1e6).toFixed(0)} млн).</p>
+ <p><b>2. Вывоз за рубеж.</b> Ожидаемое число вывозов = новые случаи × вывозов на 1000 случаев. Калибровка: за 11,4 тыс. случаев нынешней вспышки было 4 вывоза (Уганда, Кения, Франция, Нигерия) ≈ 0,35 на 1000 при нынешних мерах; в 2014 году — около дюжины вывозов на 28,6 тыс. случаев (≈0,4 на 1000). Без мер принято ≈1 на 1000 (в 3 раза больше), при жёстких мерах ≈0,15. Вывозы распределяются по странам по весам поездок (соседи по суше, затем авиасвязь).</p>
+ <p><b>3. Завоз в страну.</b> Вероятность хотя бы одного завоза = 1 − e<sup>−λ</sup>, где λ — ожидаемое число завозов в эту страну (распределение Пуассона).</p>
+ <p><b>4. Закрепится ли вирус.</b> Ветвящийся процесс с отрицательным биномиальным числом заражений (k = ${K_DISP}: большинство больных никого не заражает, немногие — многих). Вероятность, что цепочка от одного больного не оборвётся сама: 1 − q, где q = (1 + R/k·(1 − q))<sup>−k</sup>. R на месте = базовый R страны (сильная медицина 0,9, средняя 1,4, слабая 1,7) × множитель мер.</p>
+ <p><b>5. Второй круг.</b> Если в стране Африки начинается вспышка, она сама вывозит случаи по мировым авиалиниям (веса хабов: Аддис-Абеба, Найроби, Йоханнесбург, Каир…).</p>
+ <p><b>6. Планета.</b> Вероятность «хотя бы в одной стране» = 1 − ∏(1 − p) по всем странам.</p>
+ <p>Не учтено: сезонность, миграции беженцев, вакцины в испытаниях, точные потоки пассажиров (используются приблизительные веса), различия внутри стран.</p>`,
+ src_page: 'Данные на'},
+en: {title: 'Ebola (Bundibugyo virus): how likely it is to reach each country and the world',
+ lead: 'Open model: how many more cases DR Congo may see, and how likely the infection is to reach each country and take hold there — without measures and with them. It uses what is known about Ebola and past epidemics.',
+ warn: 'This is an educational model built on open data and published parameters, not a WHO forecast. The numbers show orders of magnitude and the difference between scenarios. For decisions, follow WHO, Africa CDC and your health ministry.',
+ k_now: 'Now', k_scn: 'Scenario', k_planet: 'What it means for the planet', k_map: 'Chance of an imported case by country', k_src: 'New cases per week in DR Congo',
+ k_cty: 'Countries: import, local transmission, outbreak', k_cmp: 'Compared with past epidemics', k_meas: 'How much measures help', k_why: 'Why Ebola will not become "another COVID" — and where it is dangerous', k_how: 'How it is calculated', k_sources: 'Sources',
+ s_none: 'No measures', s_none_d: 'Contact tracing and safe burials stop, borders open', s_current: 'As now', s_current_d: 'Current response: ~450 cases a week, 4 exports in 11k cases', s_strong: 'Strong measures', s_strong_d: 'Full contact tracing, isolation, exit screening, trial vaccines',
+ c_R: 'Infections per patient in DR Congo (R)', c_E: 'Exports abroad per 1,000 cases', c_L: 'Transmission in receiving countries (×)', c_H: 'Horizon, months',
+ c_note: 'Sliders adjust the selected scenario. R above 1 means growth, below 1 means decline. "Transmission ×" is how much receiving countries cut spread (1 = they do nothing).',
+ n_cases: 'confirmed cases', n_deaths: 'deaths', n_week: 'new cases a week', n_abroad: 'countries with cases outside DR Congo',
+ p_new: 'new cases in DR Congo over the horizon', p_deaths: 'expected deaths (49% fatality)', p_exp: 'expected exports abroad', p_cnt: 'countries likely to get a case (over 50%)',
+ p_out: 'chance of at least one case outside Africa', p_loc: 'chance of local transmission outside Africa', p_sus: 'chance of a sustained outbreak outside Africa', p_afr: 'chance of a new sustained outbreak elsewhere in Africa',
+ th_c: 'Country', th_imp: 'Import', th_loc: 'Local spread', th_sus: 'Outbreak', th_r: 'Local R', th_e: 'Exp. imports',
+ t_note: '"Import": at least one patient arrives within the horizon. "Local spread": they infect at least one person there. "Outbreak": the chain does not die out on its own. Kazakhstan and Uzbekistan are near the end.',
+ more: 'Show all countries', less: 'Collapse',
+ leg: ['under 1%', '1–5%', '5–20%', '20–50%', '50–90%', 'over 90%', 'source'],
+ chart_note: (a, b, c) => `Solid line: selected scenario. Dashed: no measures (${a}), as now (${b}), strong measures (${c}) — total new cases over the horizon.`,
+ m_title: s => ({none: 'No measures', current: 'As now', strong: 'Strong measures'})[s],
+ m_lines: ['New cases in DR Congo', 'Countries likely to get a case', 'Sustained outbreak outside Africa', 'Expected deaths'],
+ cmp_h: ['Epidemic', 'R0', 'Contagious before symptoms', 'Fatality', 'Cases', 'Countries', 'How it spreads'],
+ cmp: [['Ebola, Bundibugyo, DR Congo 2026 (ongoing)', '1.1–1.6', 'no', '≈49%', '11,463', '5', 'blood and fluids of the sick or dead'],
+  ['Ebola, West Africa 2014–16', '1.5–2.0', 'no', '≈40%', '28,600', '10 (7 imported, no epidemic)', 'same'],
+  ['Ebola, DR Congo (Kivu) 2018–20', '1.1–1.5', 'no', '≈66%', '3,470', '2', 'same; a vaccine existed'],
+  ['SARS, 2003', '2–3', 'hardly', '≈10%', '8,096', '29', 'respiratory droplets'],
+  ['MERS, since 2012', '<1', 'no', '≈36%', '≈2,600', '27', 'camels, hospitals'],
+  ['Flu H1N1, 2009', '1.4–1.6', 'yes', '≈0.02%', 'hundreds of millions', 'whole world', 'respiratory'],
+  ['Mpox, 2022', '1.4–2.4', 'partly', '<0.2%', '>100,000', '>120', 'close contact'],
+  ['COVID-19, 2020–23', '2.5–3 (later 5+)', 'yes, ~40–50%', '≈1% (early estimates)', 'hundreds of millions', 'whole world', 'airborne, without symptoms']],
+ meas: [['Contact tracing and isolation', 'The key tool against Ebola. In 2014 Nigeria stopped an outbreak from one imported patient at 20 cases; Senegal at one.'],
+  ['Safe burials', 'The body of someone who died of Ebola is highly infectious. In West Africa many infections came from funeral rites.'],
+  ['Exit and entry screening', 'Temperature checks catch the sick, not those still incubating (up to 21 days). Cuts exports, not to zero.'],
+  ['Travel bans', '2014 studies: cutting flights delays imports only by weeks and hampers aid. WHO advises against them.'],
+  ['21-day quarantine of contacts', 'Works where people trust the authorities; amid violence and distrust (eastern DR Congo) contacts are lost.'],
+  ['Vaccine', 'Ervebo targets the Zaire strain and is not approved for Bundibugyo. WHO has approved trials of two new vaccines.']],
+ why: ['Ebola spreads through the blood and body fluids of a sick person, not through the air. People are hardly contagious before symptoms, and with symptoms they are usually too ill to travel.',
+  'So even without measures, R outside the outbreak in countries with decent hospitals is below 1: single cases and short chains are possible, a large epidemic is unlikely.',
+  'The danger is in countries with weak health care next to the outbreak: South Sudan, CAR, Burundi, Angola, Rep. of Congo (Brazzaville is across the river from Kinshasa). There, without measures, R can exceed 1.',
+  'The main risk to the world is not a pandemic but a long epidemic in Central Africa: thousands of deaths, especially children (7 in 10 sick children under five die), and steady imports into neighbours.',
+  'For Kazakhstan the direct risk is very low: no direct flights, tiny travel flows, and hospitals can isolate a patient. The realistic route is via transit hubs (Istanbul, Dubai, Doha).'],
+ how: `<p><b>1. Epidemic in DR Congo.</b> About 450 new cases a week now. Every ${GEN_DAYS} days (the serial interval) cases multiply by R; growth is capped by the people the virus can realistically reach (ceiling ${(CAP / 1e6).toFixed(0)} million).</p>
+ <p><b>2. Exports abroad.</b> Expected exports = new cases × exports per 1,000 cases. Calibration: 4 exports in 11.4k cases in this outbreak (Uganda, Kenya, France, Nigeria) ≈ 0.35 per 1,000 under current measures; in 2014 about a dozen exports in 28.6k cases (≈0.4 per 1,000). Without measures we assume ≈1 per 1,000 (three times more), with strong measures ≈0.15. Exports are split across countries by travel weights (land neighbours first, then air links).</p>
+ <p><b>3. Import into a country.</b> Probability of at least one import = 1 − e<sup>−λ</sup>, λ = expected imports into that country (Poisson).</p>
+ <p><b>4. Does it take hold.</b> Branching process with negative-binomial offspring (k = ${K_DISP}: most patients infect nobody, a few infect many). Chance a chain from one patient does not die out: 1 − q, q = (1 + R/k·(1 − q))<sup>−k</sup>. Local R = country base R (strong health system 0.9, middle 1.4, weak 1.7) × measures multiplier.</p>
+ <p><b>5. Second round.</b> If an African country gets an outbreak, it exports cases over world air routes (hub weights: Addis Ababa, Nairobi, Johannesburg, Cairo…).</p>
+ <p><b>6. Planet.</b> Probability "in at least one country" = 1 − ∏(1 − p) over all countries.</p>
+ <p>Not included: seasonality, refugee movements, trial vaccines, exact passenger flows (approximate weights are used), differences within countries.</p>`,
+ src_page: 'Data as of'}};
+const SOURCES = [
+ ['WHO — Director-General’s remarks, 3rd IHR Emergency Committee on Bundibugyo virus disease, 17 Nov 2026', 'https://www.who.int/news-room/speeches/item/who-director-general-s-opening-remarks-at-the-third-ihr-emergency-committee-meeting-on-bundibugyo-virus-disease-epidemic-in-the-democratic-republic-of-the-congo---17-november-2026'],
+ ['Genomic Epi — 2026 Bundibugyo Ebola outbreak tracker (INRB/INSP and WHO data)', 'https://www.genomicepi.com/outbreaks/ebola-2026/'],
+ ['Wikipedia — 2026 Ebola epidemic', 'https://en.wikipedia.org/wiki/2026_Ebola_epidemic'],
+ ['Contagion Live — CDC: 11,145 cases, 5,437 deaths as of 10 Nov', 'https://www.contagionlive.com/view/ebola-outbreak-reaches-11-145-cases-5437-deaths'],
+ ['Africa CDC via Al Jazeera — outbreak still not under control, 15 Nov', 'https://www.aljazeera.com/amp/news/2026/11/15/africa-cdc-says-ebola-outbreak-in-dr-congo-still-not-under-control'],
+ ['WHO Ebola Response Team — Ebola virus disease in West Africa: the first 9 months (NEJM 2014), R0 and serial interval', 'https://www.nejm.org/doi/full/10.1056/NEJMoa1411100'],
+ ['Gomes et al. — Assessing the international spreading risk associated with the 2014 West African Ebola outbreak (PLOS Currents)', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC4169359/'],
+ ['Poletto et al. — Assessing the impact of travel restrictions on international spread of the 2014 Ebola epidemic (Eurosurveillance)', 'https://www.eurosurveillance.org/content/10.2807/1560-7917.ES2014.19.42.20936'],
+ ['Lloyd-Smith et al. — Superspreading and the effect of individual variation on disease emergence (Nature 2005)', 'https://www.nature.com/articles/nature04153'],
+ ['WHO — Ebola virus disease fact sheet', 'https://www.who.int/news-room/fact-sheets/detail/ebola-virus-disease']];
+
+/* ---------------- model ---------------- */
+let lang = (() => { try { const l = localStorage.getItem('wn_lang'); return l === 'ru' || l === 'kk' ? 'ru' : l ? 'en' : (navigator.language || '').startsWith('ru') || (navigator.language || '').startsWith('kk') ? 'ru' : 'en'; } catch (e) { return 'ru'; } })();
+let scn = 'none'; const par = Object.assign({H: 6}, SCN.none);
+const T = k => TX[lang][k];
+function pMajor(R, k = K_DISP) { if (R <= 1) return 0; let q = 0.5; for (let i = 0; i < 200; i++) q = Math.pow(1 + R / k * (1 - q), -k); return 1 - q; }
+function pSecondary(R, k = K_DISP) { return 1 - Math.pow(1 + R / k, -k); }
+function sourceSeries(R, H) { const weeks = Math.round(H * 4.345), g = Math.pow(R, 7 / GEN_DAYS); let w = NOW.weekly, cum = NOW.cases; const out = [];
+  for (let i = 0; i < weeks; i++) { w = w * g * Math.max(0, 1 - cum / CAP); cum += w; out.push(w); } return out; }
+function run(p) {
+  const series = sourceSeries(p.R, p.H), newCases = series.reduce((a, b) => a + b, 0), E = newCases * p.E / 1000;
+  const wsum = C.reduce((a, c) => a + c[4], 0), hubSum = C.reduce((a, c) => a + c[6], 0);
+  const rows = C.map(c => { const lam = E * c[4] / wsum, R = TIER_R[c[5]] * p.L; return {c, lam, R, pm: pMajor(R), ps: pSecondary(R)}; });
+  // second round: sustained outbreaks in African countries export over world air routes
+  for (const r of rows) if (r.c[7]) { const pOut = 1 - Math.exp(-r.lam * r.pm), ex = pOut * OUT_SIZE * p.E / 1000 * (1 + 2 * r.c[6]);
+    for (const s of rows) if (s !== r) s.lam2 = (s.lam2 || 0) + ex * s.c[6] / hubSum; }
+  for (const r of rows) { r.L = r.lam + (r.lam2 || 0); r.imp = 1 - Math.exp(-r.L); r.loc = 1 - Math.exp(-r.L * r.ps); r.sus = 1 - Math.exp(-r.L * r.pm); }
+  const any = (f, sel) => 1 - rows.filter(sel).reduce((a, r) => a * (1 - r[f]), 1), out = r => !r.c[7];
+  return {series, newCases, E, rows, deaths: newCases * CFR, likely: rows.filter(r => r.imp > 0.5).length,
+    pOut: any('imp', out), pLoc: any('loc', out), pSus: any('sus', out), pAfr: any('sus', r => r.c[7])}; }
+
+/* ---------------- render ---------------- */
+const fmt = (n, d = 0) => (n >= 1e6 ? (n / 1e6).toLocaleString(lang, {maximumFractionDigits: 1}) + (lang === 'ru' ? ' млн' : 'M') : Math.round(n).toLocaleString(lang));
+const pct = p => p < 0.001 ? '<0.1%' : p < 0.01 ? (p * 100).toFixed(1) + '%' : p > 0.999 ? '>99.9%' : Math.round(p * 100) + '%';
+const COLS = ['#2a3140', '#4f6b3a', '#f9d64d', '#f98c33', '#e2463b', '#8b0a1a'];
+const colFor = p => p < 0.01 ? COLS[0] : p < 0.05 ? COLS[1] : p < 0.2 ? COLS[2] : p < 0.5 ? COLS[3] : p < 0.9 ? COLS[4] : COLS[5];
+const name = c => lang === 'ru' ? c[2] : c[3];
+let world = null, showAll = false;
+function render() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-t]').forEach(e => { e.innerHTML = T(e.dataset.t); });
+  document.querySelectorAll('.lang button').forEach(b => b.classList.toggle('on', b.dataset.l === lang));
+  const st = (v, l, col) => `<div class="card stat"><b style="color:${col || 'var(--fg)'}">${v}</b><span>${l}</span></div>`;
+  document.getElementById('now').innerHTML = st(fmt(NOW.cases), T('n_cases'), 'var(--red)') + st(fmt(NOW.deaths), T('n_deaths'), 'var(--red)') + st('~' + NOW.weekly, T('n_week'), 'var(--org)')
+    + st(NOW.abroad.length, T('n_abroad') + ': ' + NOW.abroad.map(a => name(C.find(c => c[0] === a[0]))).join(', '), 'var(--yel)');
+  document.getElementById('scn').innerHTML = ['none', 'current', 'strong'].map(s => `<button data-s="${s}" class="${scn === s ? 'on' : ''}">${T('s_' + s)}<small>${T('s_' + s + '_d')}</small></button>`).join('');
+  for (const [id, k, f] of [['R', 'R', v => (+v).toFixed(2)], ['E', 'E', v => (+v).toFixed(2)], ['L', 'L', v => (+v).toFixed(2)], ['H', 'H', v => v]]) { document.getElementById('i' + id).value = par[k]; document.getElementById('o' + id).textContent = f(par[k]); }
+  const r = run(par), big = (v, l, col, p) => `<div class="card"><div class="big" style="color:${col}">${v}</div><div class="note" style="margin-top:6px">${l}</div>${p != null ? `<div class="bar"><i style="width:${Math.max(1, p * 100)}%;background:${col}"></i></div>` : ''}</div>`;
+  document.getElementById('planet').innerHTML = big(fmt(r.newCases), T('p_new'), 'var(--org)') + big(fmt(r.deaths), T('p_deaths'), 'var(--red)') + big(r.E < 10 ? r.E.toFixed(1) : fmt(r.E), T('p_exp'), 'var(--yel)') + big(r.likely, T('p_cnt'), 'var(--yel)')
+    + big(pct(r.pOut), T('p_out'), colFor(r.pOut), r.pOut) + big(pct(r.pLoc), T('p_loc'), colFor(r.pLoc), r.pLoc) + big(pct(r.pSus), T('p_sus'), colFor(r.pSus), r.pSus) + big(pct(r.pAfr), T('p_afr'), colFor(r.pAfr), r.pAfr);
+  // table
+  const rows = r.rows.slice().sort((a, b) => b.imp - a.imp), kz = rows.filter(x => x.c[0] === 'KAZ' || x.c[0] === 'UZB'), top = showAll ? rows : rows.slice(0, 20).concat(kz.filter(x => rows.indexOf(x) >= 20));
+  const pl = p => `<span class="pill" style="background:${colFor(p)};color:${p < 0.05 ? '#eef0f3' : '#0b0d12'}">${pct(p)}</span>`;
+  document.getElementById('tbl').innerHTML = `<tr><th>${T('th_c')}</th><th>${T('th_imp')}</th><th>${T('th_loc')}</th><th>${T('th_sus')}</th><th style="text-align:right">${T('th_r')}</th><th style="text-align:right">${T('th_e')}</th></tr>`
+    + top.map(x => `<tr${x.c[0] === 'KAZ' ? ' style="background:rgba(242,193,78,.07)"' : ''}><td>${name(x.c)}</td><td>${pl(x.imp)}</td><td>${pl(x.loc)}</td><td>${pl(x.sus)}</td><td class="n" style="color:${x.R > 1 ? 'var(--red)' : 'var(--grn)'}">${x.R.toFixed(2)}</td><td class="n">${x.L < 0.01 ? '<0.01' : x.L.toFixed(2)}</td></tr>`).join('')
+    + `<tr><td colspan="6" style="border:0;padding-top:10px"><button id="more" class="lang" style="all:unset;cursor:pointer;color:var(--gold);font-size:13px">${showAll ? T('less') : T('more') + ' (' + rows.length + ')'}</button></td></tr>`;
+  document.getElementById('more').onclick = () => { showAll = !showAll; render(); };
+  // comparison
+  const h = T('cmp_h'); document.getElementById('cmp').innerHTML = `<tr>${h.map(x => `<th>${x}</th>`).join('')}</tr>` + T('cmp').map((row, i) => `<tr${i === 0 ? ' style="background:rgba(238,85,69,.08)"' : ''}>${row.map((x, j) => `<td${j === 0 ? ' style="font-weight:600"' : ''}>${x}</td>`).join('')}</tr>`).join('');
+  // measures: three scenarios side by side + explanations
+  const res = {}; for (const s of ['none', 'current', 'strong']) res[s] = run(Object.assign({}, SCN[s], {H: par.H}));
+  document.getElementById('meas').innerHTML = ['none', 'current', 'strong'].map(s => { const q = res[s], ln = T('m_lines');
+    return `<div class="card"${s === scn ? ' style="border-color:var(--gold)"' : ''}><b style="font-size:16px">${T('m_title')(s)}</b><table style="margin-top:6px">`
+      + `<tr><td>${ln[0]}</td><td class="n">${fmt(q.newCases)}</td></tr><tr><td>${ln[3]}</td><td class="n">${fmt(q.deaths)}</td></tr><tr><td>${ln[1]}</td><td class="n">${q.likely}</td></tr><tr><td>${ln[2]}</td><td class="n">${pct(q.pSus)}</td></tr></table></div>`; }).join('')
+    + T('meas').map(m => `<div class="card"><b>${m[0]}</b><div class="note" style="margin-top:4px;color:var(--fg)">${m[1]}</div></div>`).join('');
+  document.getElementById('why').innerHTML = T('why').map(x => `<li>${x}</li>`).join('');
+  document.getElementById('how').innerHTML = T('how');
+  document.getElementById('asof').textContent = T('src_page') + ' ' + NOW.date;
+  document.getElementById('srcs').innerHTML = SOURCES.map(s => `<li><a href="${s[1]}" target="_blank" rel="noopener">${s[0]}</a></li>`).join('');
+  drawChart(r, res); drawMap(r);
+}
+function drawChart(r, res) {
+  const svg = d3.select('#chart'); svg.selectAll('*').remove(); const W = 520, H = 300, m = {l: 52, r: 12, t: 12, b: 30};
+  const all = [res.none.series, res.current.series, res.strong.series, r.series], n = r.series.length, ymax = d3.max(all.flat()) || 1;
+  const x = d3.scaleLinear([0, n], [m.l, W - m.r]), y = d3.scaleLinear([0, ymax * 1.05], [H - m.b, m.t]).nice();
+  svg.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(6).tickFormat(d => (lang === 'ru' ? 'нед ' : 'wk ') + d)).attr('color', '#8a93a3');
+  svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickFormat(d3.format('~s'))).attr('color', '#8a93a3');
+  const line = d3.line().x((d, i) => x(i + 1)).y(d => y(d)), cols = {none: '#e2463b', current: '#f98c33', strong: '#4fd27a'};
+  for (const s of ['none', 'current', 'strong']) svg.append('path').attr('d', line(res[s].series)).attr('fill', 'none').attr('stroke', cols[s]).attr('stroke-width', 1.4).attr('stroke-dasharray', '4 4').attr('opacity', .8);
+  svg.append('path').attr('d', line(r.series)).attr('fill', 'none').attr('stroke', '#f2c14e').attr('stroke-width', 2.6);
+  document.getElementById('chartNote').textContent = T('chart_note')(fmt(res.none.newCases), fmt(res.current.newCases), fmt(res.strong.newCases));
+}
+function drawMap(r) {
+  const svg = d3.select('#map'), leg = document.getElementById('leg');
+  leg.innerHTML = T('leg').map((t, i) => `<span><i style="background:${i < 6 ? COLS[i] : '#7a1fa2'}"></i> ${t}</span>`).join('');
+  if (!world) return; svg.selectAll('*').remove();
+  const proj = d3.geoNaturalEarth1().fitSize([960, 500], {type: 'Sphere'}), path = d3.geoPath(proj), by = {};
+  for (const x of r.rows) by[+x.c[1]] = x;
+  svg.append('path').attr('d', path({type: 'Sphere'})).attr('fill', '#0e1219').attr('stroke', '#262b35');
+  const tip = document.getElementById('tip');
+  svg.append('g').selectAll('path').data(world).join('path').attr('d', path)
+    .attr('fill', d => +d.id === 180 ? '#7a1fa2' : by[+d.id] ? colFor(by[+d.id].imp) : '#1a1f29').attr('stroke', '#0b0d12').attr('stroke-width', .5)
+    .on('mousemove', (e, d) => { const x = by[+d.id]; if (!x && +d.id !== 180) { tip.style.display = 'none'; return; }
+      tip.innerHTML = +d.id === 180 ? `<b>${lang === 'ru' ? 'ДР Конго' : 'DR Congo'}</b><br>${fmt(NOW.drc)} ${T('n_cases')}` : `<b>${name(x.c)}</b><br>${T('th_imp')}: ${pct(x.imp)}<br>${T('th_loc')}: ${pct(x.loc)}<br>${T('th_sus')}: ${pct(x.sus)}`;
+      tip.style.display = 'block'; tip.style.left = Math.min(innerWidth - 270, e.clientX + 14) + 'px'; tip.style.top = (e.clientY + 14) + 'px'; })
+    .on('mouseleave', () => { tip.style.display = 'none'; });
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-s]'); if (b) { scn = b.dataset.s; Object.assign(par, SCN[scn]); render(); }
+  const l = e.target.closest('[data-l]'); if (l) { lang = l.dataset.l; try { localStorage.setItem('wn_lang', lang); } catch (err) {} render(); } });
+for (const [id, k] of [['R', 'R'], ['E', 'E'], ['L', 'L'], ['H', 'H']]) document.getElementById('i' + id).addEventListener('input', e => { par[k] = +e.target.value; render(); });
+render();
+fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json').then(r => r.json()).then(t => { world = topojson.feature(t, t.objects.countries).features; render(); }).catch(() => {});
+</script>
+</body>
+</html>
