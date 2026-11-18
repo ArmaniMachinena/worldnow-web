@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
-<script>window.WN_BUILD="20261118204446";</script>
+<script>window.WN_BUILD="20261118204545";</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>WorldNow:Emergency</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -2984,7 +2984,7 @@ const QI = {
 const QUICK = [['quakes', 'Earthquakes', () => quakes().length], ['fires', 'Fires', () => FIRES.reduce((n, f, i) => n + (fireOk(i) ? 1 : 0), 0)], ['events', 'Hazards', () => events.filter(evOk).length], ['incidents', 'Incidents', () => INCID.filter(incOk).length], ['threats', 'Threats', () => TS.alerts.length], ['risk', 'Country risks', () => Object.keys(RISK.adv).length], ['outages', 'Internet outages', () => Object.keys(OUTNOW).length], ['gps', 'GPS jamming', () => GPSJ.length], '-', ['services', 'Services & cameras', null], ['transport', 'Transport', null], ['more', 'More', null]];
 /* left rail = closed folders: nature · conflicts · technology/IT · services · transport · more */
 const QF = k => QUICK.find(q => Array.isArray(q) && q[0] === k);
-const NATURE = [QF('quakes'), QF('fires'), QF('events'), '-', ['eqn', 'Earthquakes near me', null]];
+const NATURE = [QF('quakes'), QF('fires'), QF('events')];
 const SECURITY = [QF('incidents'), QF('threats'), QF('risk')];
 const TECH = [QF('outages'), QF('gps')];
 const foldCount = list => () => list.reduce((n, t) => n + (t !== '-' && t[2] && S.layers[t[0]] ? t[2]() : 0), 0) || null;
@@ -3000,7 +3000,7 @@ const MLAY = {quakes: '#f98c33', fires: '#ee5545', events: '#f98c33', incidents:
 const MHAZ = ['gps', 'cams', 'night'], MHAZ_ALL = ['quakes', 'fires', 'events', 'incidents', 'threats', 'risk', 'outages', 'gps', 'cams', 'night'], MTRN = ['flights', 'mil', 'airports', 'ports', 'sats', 'iss'];
 const MTAB = {layers: ['mLayers'], sit: ['mSit', 'radar', 'threats'], sos: ['sos'], svc: ['mSvc', 'mon', 'tv', 'iwm'], more: ['mMore', 'about', 'news', 'nuke']};
 function mInfo(k) { const q = [...NATURE, ...SECURITY, ...TECH, ...TRANSPORT, ...MORE, ...SERVICES].find(x => Array.isArray(x) && x[0] === k); return q || [k, k, null]; }
-const MRAIL = [['quakes', 'Quakes'], ['fires', 'Fires'], ['events', 'Hazards'], ['eqn', 'Nearby'], '|', ['incidents', 'Incidents'], ['threats', 'Threats'], ['risk', 'Risks'], '|', ['outages', 'Internet']];
+const MRAIL = [['quakes', 'Quakes'], ['fires', 'Fires'], ['events', 'Hazards'], '|', ['incidents', 'Incidents'], ['threats', 'Threats'], ['risk', 'Risks'], '|', ['outages', 'Internet']];
 function renderMRail() { const el = $('mRail'); if (!el) return;
   el.innerHTML = MRAIL.map(m => { if (m === '|') return '<i class="mrsep"></i>'; const [k, t] = m, q = mInfo(k), c = q[2] ? q[2]() : null, on = k === 'eqn' ? !!(S.sel && S.sel.type === 'eqn') : !!S.layers[k];
     return `<button data-mr="${k}" class="${on ? 'on' : ''}" aria-pressed="${on}"><span class="qi"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">${QI[k]}</svg></span><span class="ml">${wnTr(t)}</span>${on && c ? `<b>${shortN(c)}</b>` : ''}</button>`; }).join(''); }
@@ -3288,7 +3288,9 @@ function knLines(ctx, now) { if (!KN.on || !KN.any) return; const oc0 = $('globe
     if (hot) { ctx.beginPath(); ctx.arc(x1, y1, 4 + age / 4000 * 22, 0, 7); ctx.globalAlpha = (1 - age / 4000) * .9; ctx.lineWidth = 2; ctx.stroke(); }
     ctx.restore(); } }
 document.addEventListener('click', e => { const b = e.target.closest('#keyNews [data-kn]'); if (!b) return; const o = KN.items[+b.dataset.kn]; if (!o) return; try { flyTo(o.ll, Math.max(S.zoom, 2.2), () => { try { o.open(); } catch (err) {} }); } catch (err) {} });
-setTimeout(() => { try { knCollect(); } catch (e) {} }, 2700); setInterval(() => { try { knCollect(); } catch (e) {} }, 60000); addEventListener('resize', () => setTimeout(knPlace, 60));
+setTimeout(() => { try { knCollect(); } catch (e) {} }, 2700);
+/* hidden page: earthquakes near me, only via /eq (or #eq) */
+if (/(^|[#&?])eq\b/.test(location.hash + location.search)) setTimeout(() => { try { $('bEqn').click(); } catch (e) {} }, 1800); setInterval(() => { try { knCollect(); } catch (e) {} }, 60000); addEventListener('resize', () => setTimeout(knPlace, 60));
 function evpTick(now) {
   const el = $('evPop'); if (!el) return;
   if (!EVP.cur) { if (!EVP.q.length || (S.sel && MOB()) || !$('onb').hidden) { el.hidden = true; return; } EVP.cur = {...EVP.q.shift(), t0: now, wait: now};
