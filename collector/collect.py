@@ -1005,9 +1005,8 @@ def apnews(p, fast):
 
 def _gtx(texts, tl):
     """Google Translate (public gtx endpoint) for a batch of short lines; returns a list of the same length or None."""
-    body = urllib.parse.urlencode({'q': '\n'.join(t.replace('\n', ' ') for t in texts)}).encode()
-    j = json.loads(get('https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=' + tl + '&dt=t', data=body,
-                       headers={'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'}, timeout=30))
+    q = urllib.parse.quote('\n'.join(t.replace('\n', ' ') for t in texts))
+    j = json.loads(get('https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=' + tl + '&dt=t&q=' + q, timeout=30))
     out = ''.join(seg[0] for seg in (j[0] or []) if seg and seg[0]).split('\n')
     return [x.strip() for x in out] if len(out) == len(texts) else None
 
@@ -1032,27 +1031,33 @@ def trans(p, slow):
         else:
             todo.append(t)
     todo = todo[:500]
+    errs = []
     for tl, k in (('ru', 0), ('kk', 1)):
         i = 0
         while i < len(todo):
             chunk, n = [], 0
-            while i < len(todo) and n + len(todo[i]) < 3500 and len(chunk) < 60:
+            while i < len(todo) and n + len(todo[i]) < 1200 and len(chunk) < 25:
                 chunk.append(todo[i]); n += len(todo[i]) + 1; i += 1
             try:
                 r = _gtx(chunk, tl)
-            except Exception:
-                r = None
+            except Exception as e:
+                if not errs:
+                    log('     trans:', type(e).__name__, str(e)[:160])
+                errs.append(1); r = None
+                if len(errs) > 6:
+                    break
             if r is None:   # alignment lost: one by one
                 r = []
                 for t in chunk:
                     try:
-                        r.append((_gtx([t], tl) or [''])[0])
+                        r.append('' if len(errs) > 6 else (_gtx([t], tl) or [''])[0])
                     except Exception:
-                        r.append('')
+                        errs.append(1); r.append('')
             for t, v in zip(chunk, r):
                 out.setdefault(t, ['', ''])[k] = v
             time.sleep(0.3)
     p['tr'] = {t: v for t, v in out.items() if v[0] or v[1]}
+    log(f'     trans: {len(p["tr"])} strings, {len(todo)} new, {len(errs)} errors')
 
 
 def faa(p):
