@@ -1,21 +1,24 @@
 # Collects open data every 5 minutes and publishes it to the "data" branch (one commit, force-pushed).
 # The site reads https://raw.githubusercontent.com/ArmaniMachinena/worldnow-web/data/*.json
-# GitHub starts scheduled runs only about once an hour, so each run keeps going for ~55 minutes
-# and collects every 5 minutes inside it (public repository: Actions minutes are free).
+# Every source is refreshed at least every 2 hours (fast ones every 5–30 minutes).
+# GitHub's own schedule is unreliable (runs every 4–8 hours since mid-November), so each run keeps
+# collecting for ~115 minutes and then starts the next run itself (relay). The 2-hour schedule stays
+# as a backup that restarts the chain if it ever breaks. Public repository: Actions minutes are free.
 name: live-data
 on:
   schedule:
-    - cron: '*/20 * * * *'
+    - cron: '7 */2 * * *'
   workflow_dispatch:
 permissions:
   contents: write
+  actions: write
 concurrency:
   group: live-data
   cancel-in-progress: false
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 70
+    timeout-minutes: 135
     steps:
       - uses: actions/checkout@v4
         with:
@@ -43,6 +46,11 @@ jobs:
               && git push --quiet --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" data) || echo "push failed"
             rm -rf prev && cp -r out prev
             now=$(date +%s)
-            [ $((now - start)) -gt 3000 ] && break
+            [ $((now - start)) -gt 6900 ] && break
             sleep $(( 300 - (now - t0) > 10 ? 300 - (now - t0) : 10 ))
           done
+      - name: Start the next run (relay, keeps the 2-hour cycle going)
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run live-data.yml --repo "$GITHUB_REPOSITORY" --ref main || echo "relay failed; the schedule restarts the chain"
