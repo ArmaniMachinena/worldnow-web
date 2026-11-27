@@ -345,5 +345,29 @@ for (const [id, k] of [['R', 'R'], ['E', 'E'], ['L', 'L'], ['H', 'H']]) document
 render();
 fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json').then(r => r.json()).then(t => { world = topojson.feature(t, t.objects.countries).features; render(); }).catch(() => {});
 </script>
+<script>/* Anonymous usage stats: country and city come from Cloudflare; the browser sends only random codes and button names. No IP, no cookies. Opt out: add #nostat to the address once. */
+(function () { try {
+  if (/(^|[#&?])nostat\b/.test(location.hash + location.search)) localStorage.setItem('wn_nostat', '1');
+  if (/(^|[#&?])stat\b/.test(location.hash + location.search)) localStorage.removeItem('wn_nostat');
+  if (localStorage.getItem('wn_nostat')) { window.wnStat = () => {}; return; }
+  const U = 'https://wnstat.pages.dev/api/ev', R = () => Math.random().toString(36).slice(2, 12);
+  let vid = localStorage.getItem('wn_vid'); if (!vid) { vid = R() + R(); localStorage.setItem('wn_vid', vid); }
+  let sid = sessionStorage.getItem('wn_sid'), fresh = !sid; if (!sid) { sid = R() + R(); sessionStorage.setItem('wn_sid', sid); }
+  const n = (+localStorage.getItem('wn_vn') || 0) + (fresh ? 1 : 0); localStorage.setItem('wn_vn', n);
+  const Q = [];
+  const flush = () => { if (!Q.length) return; const body = JSON.stringify({ sid, vid, e: Q.splice(0, 30) }); try { if (!(navigator.sendBeacon && navigator.sendBeacon(U, new Blob([body], { type: 'text/plain' })))) fetch(U, { method: 'POST', body, keepalive: true, mode: 'no-cors', headers: { 'content-type': 'text/plain' } }); } catch (e) {} };
+  window.wnStat = (ev, d) => { Q.push([ev, String(d == null ? '' : d).slice(0, 100)]); if (Q.length >= 25) flush(); };
+  const app = /WorldNowApp/.test(navigator.userAgent), coarse = matchMedia('(pointer:coarse)').matches;
+  wnStat('visit', (app ? 'app' : 'web') + ' · ' + (coarse ? (Math.min(innerWidth, innerHeight) < 600 ? 'phone' : 'tablet') : 'desktop'));
+  wnStat('ret', n > 1 ? 'returning' : 'new');
+  wnStat('lang', (localStorage.getItem('wn_lang') || navigator.language || '').slice(0, 5));
+  wnStat('page', location.pathname.replace(/^\/worldnow-web/, '') + (location.hash ? location.hash.slice(0, 20) : ''));
+  document.addEventListener('click', e => { const b = e.target.closest('[data-k],[data-cc],[data-w],[id]'); if (!b || b === document.body) return;
+    if (b.dataset.k) wnStat('k', b.dataset.k); else if (b.dataset.cc) wnStat('country', b.dataset.cc); else if (b.dataset.w) wnStat('win', b.dataset.w); else if (/^(b|m)[A-Z]/.test(b.id)) wnStat('btn', b.id); }, true);
+  setInterval(() => { if (document.visibilityState === 'visible') wnStat('hb', ''); flush(); }, 30000);
+  setTimeout(flush, 2500);
+  addEventListener('pagehide', flush); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
+} catch (e) { window.wnStat = () => {}; } })();
+</script>
 </body>
 </html>
